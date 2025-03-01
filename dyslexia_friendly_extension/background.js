@@ -24,7 +24,7 @@ async function processText(selectedText) {
 
     alert("Rewriting to be Dyslexia Friendly"); // Show popup
 
-    const apiKey = "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"; // Replace with your API key
+    const apiKey = "API_KEY"; // Replace with your API key
 
     try {
         const data = await openai.chat.completions.create({
