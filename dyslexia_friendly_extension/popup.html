@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dyslexia Text Reader</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .dropdown {
+            margin-bottom: 20px;
+        }
+        .dropdown label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .dropdown select {
+            width: 100%;
+            padding: 5px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dyslexia Text Reader</h1>
+    <div class="dropdown">
+        <label for="font-select">Change Font</label>
+        <select id="font-select">
+            <option value="arial">Arial</option>
+            <option value="sans-serif">Sans Serif</option>
+            <option value="comic-sans">Comic Sans</option>
+            <option value="open-dyslexic">OpenDyslexic</option>
+        </select>
+    </div>
+    <div class="dropdown">
+        <label for="ai-model-select">Change AI Model</label>
+        <select id="ai-model-select">
+            <option value="gpt-4o">GPT-4o</option>
+            <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+            <option value="gemini-1-5-pro">Gemini 1.5 Pro</option>
+            <option value="deepseek-r1">DeepSeek R1</option>
+        </select>
+    </div>
+</body>
+</html>
