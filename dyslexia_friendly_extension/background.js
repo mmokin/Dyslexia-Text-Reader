@@ -1,6 +1,3 @@
-import OpenAI from "openai";
-const openai = new OpenAI();
-
 chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({
         id: "dyslexiaFriendly",
@@ -27,19 +24,6 @@ async function processText(selectedText) {
     const apiKey = "API_KEY"; // Replace with your API key
 
     try {
-        const data = await openai.chat.completions.create({
-            model: "gpt-4o",
-            messages: [
-                { role: "developer", content: "You are a helpful assistant." },
-                {
-                    role: "user",
-                    content: "Write a haiku about recursion in programming.",
-                },
-            ],
-            store: true,
-        });
-        
-        /*
         const response = await fetch("https://api.openai.com/v1/completions", {
             method: "POST",
             headers: {
@@ -52,26 +36,28 @@ async function processText(selectedText) {
                 max_tokens: 100
             })
         });
-        */
+        
 
-        //const data = await response.json();
+        const data = await response.json();
 
         if (data.choices && data.choices[0].text) {
             replaceHighlightedText(data.choices[0].text, "Arial");
         }
     } catch (error) {
-        printf("starting");
+        console.log("starting");
         console.error("Error:", error);
-        printf("ended");
+        console.log("ended");
 
         replaceHighlightedText(selectedText, "Sans Serif");
     }
 }
 
 function replaceHighlightedText(newText, newFont) {
-    printf("Running with %s", newFont);
+    console.log("Running with ", newFont);
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
+
+    console.log("Replacing text with ", newText);
 
     const range = selection.getRangeAt(0);
     const span = document.createElement("span");
