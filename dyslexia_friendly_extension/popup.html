@@ -4,49 +4,205 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dyslexia Text Reader</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-        }
-        h1 {
-            font-size: 24px;
-            margin-bottom: 20px;
-        }
-        .dropdown {
-            margin-bottom: 20px;
-        }
-        .dropdown label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-        .dropdown select {
-            width: 100%;
-            padding: 5px;
-            font-size: 16px;
-        }
-    </style>
+    <link rel="stylesheet" href="styles_dyslexia.css">
 </head>
 <body>
-    <h1>Dyslexia Text Reader</h1>
-    <div class="dropdown">
-        <label for="font-select">Change Font</label>
-        <select id="font-select">
-            <option value="arial">Arial</option>
-            <option value="sans-serif">Sans Serif</option>
-            <option value="comic-sans">Comic Sans</option>
-            <option value="open-dyslexic">OpenDyslexic</option>
-        </select>
+    <div class="container">
+        <header>
+            <h1>Dyslexia Text Reader</h1>
+            <div class="main-toggle">
+                <label class="switch">
+                    <input type="checkbox" id="extension-toggle">
+                    <span class="slider round"></span>
+                </label>
+                <span id="toggle-status">Off</span>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="features">Features</button>
+            <button class="tab-btn" data-tab="settings">Settings</button>
+            <button class="tab-btn" data-tab="account">Account</button>
+        </div>
+
+        <div class="tab-content">
+            <!-- Features tab -->
+            <div id="features" class="tab-pane active">
+                <div class="feature-item">
+                    <div class="feature-header">
+                        <h3>Text Rewrite</h3>
+                        <label class="switch small">
+                            <input type="checkbox" id="rewrite-toggle" checked>
+                            <span class="slider round small"></span>
+                        </label>
+                    </div>
+                    <p>Rewrite selected text to be more dyslexia-friendly.</p>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-header">
+                        <h3>Text to Speech</h3>
+                        <label class="switch small">
+                            <input type="checkbox" id="tts-toggle" checked>
+                            <span class="slider round small"></span>
+                        </label>
+                    </div>
+                    <p>Read selected text aloud. Select text and press Ctrl+Shift+R.</p>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-header">
+                        <h3>Text Simplification</h3>
+                        <select id="simplification-level">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <p>Simplify complex words and sentences.</p>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-header">
+                        <h3>Phonetic Support</h3>
+                        <label class="switch small">
+                            <input type="checkbox" id="phonetics-toggle">
+                            <span class="slider round small"></span>
+                        </label>
+                    </div>
+                    <p>Display phonetic transcriptions for words.</p>
+                </div>
+            </div>
+
+            <!-- Settings tab -->
+            <div id="settings" class="tab-pane">
+                <div class="setting-group">
+                    <h3>Font Settings</h3>
+                    <div class="setting-item">
+                        <label for="font-select">Font Family</label>
+                        <select id="font-select">
+                            <option value="arial">Arial</option>
+                            <option value="sans-serif" selected>Sans Serif</option>
+                            <option value="comic-sans">Comic Sans</option>
+                            <option value="open-dyslexic">OpenDyslexic</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-item">
+                        <label for="font-size">Font Size: <span id="font-size-value">16px</span></label>
+                        <input type="range" id="font-size" min="12" max="24" step="1" value="16">
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Spacing</h3>
+                    <div class="setting-item">
+                        <label for="letter-spacing">Letter Spacing: <span id="letter-spacing-value">0.12em</span></label>
+                        <input type="range" id="letter-spacing" min="0" max="0.5" step="0.01" value="0.12">
+                    </div>
+
+                    <div class="setting-item">
+                        <label for="word-spacing">Word Spacing: <span id="word-spacing-value">0.16em</span></label>
+                        <input type="range" id="word-spacing" min="0" max="0.5" step="0.01" value="0.16">
+                    </div>
+
+                    <div class="setting-item">
+                        <label for="line-spacing">Line Spacing: <span id="line-spacing-value">1.5</span></label>
+                        <input type="range" id="line-spacing" min="1" max="3" step="0.1" value="1.5">
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>Colors</h3>
+                    <div class="setting-item">
+                        <label for="text-color">Text Color</label>
+                        <input type="color" id="text-color" value="#000000">
+                    </div>
+
+                    <div class="setting-item">
+                        <label for="background-color">Background Color</label>
+                        <input type="color" id="background-color" value="#f8f8f8">
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>AI Model</h3>
+                    <div class="setting-item">
+                        <select id="ai-model-select">
+                            <option value="gpt-4o" selected>GPT-4o</option>
+                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <h3>API Keys</h3>
+                    <div class="setting-item">
+                        <label for="openai-key">OpenAI API Key</label>
+                        <input type="password" id="openai-key" placeholder="Enter your OpenAI API key">
+                    </div>
+                </div>
+
+                <div class="buttons">
+                    <button id="save-settings" class="primary-btn">Save Settings</button>
+                    <button id="reset-settings" class="secondary-btn">Reset to Default</button>
+                </div>
+            </div>
+
+            <!-- Account tab -->
+            <div id="account" class="tab-pane">
+                <div id="login-form" class="auth-form">
+                    <h3>Login</h3>
+                    <div class="form-group">
+                        <label for="login-username">Username</label>
+                        <input type="text" id="login-username" placeholder="Enter your username">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" placeholder="Enter your password">
+                    </div>
+                    <div class="form-actions">
+                        <button id="login-btn" class="primary-btn">Login</button>
+                        <a href="#" id="show-register">Create an account</a>
+                    </div>
+                    <div id="login-message" class="message"></div>
+                </div>
+
+                <div id="register-form" class="auth-form" style="display: none;">
+                    <h3>Create Account</h3>
+                    <div class="form-group">
+                        <label for="register-username">Username</label>
+                        <input type="text" id="register-username" placeholder="Choose a username">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-email">Email</label>
+                        <input type="email" id="register-email" placeholder="Enter your email">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Password</label>
+                        <input type="password" id="register-password" placeholder="Choose a password">
+                    </div>
+                    <div class="form-actions">
+                        <button id="register-btn" class="primary-btn">Register</button>
+                        <a href="#" id="show-login">Back to login</a>
+                    </div>
+                    <div id="register-message" class="message"></div>
+                </div>
+
+                <div id="user-profile" style="display: none;">
+                    <h3>Your Profile</h3>
+                    <div class="profile-info">
+                        <p>Username: <span id="profile-username"></span></p>
+                        <p>Email: <span id="profile-email"></span></p>
+                    </div>
+                    <p>Your settings are automatically synced across all your devices when you're logged in.</p>
+                    <button id="logout-btn" class="secondary-btn">Logout</button>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="dropdown">
-        <label for="ai-model-select">Change AI Model</label>
-        <select id="ai-model-select">
-            <option value="gpt-4o">GPT-4o</option>
-            <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
-            <option value="gemini-1-5-pro">Gemini 1.5 Pro</option>
-            <option value="deepseek-r1">DeepSeek R1</option>
-        </select>
-    </div>
+
+    <script src="popup.js"></script>
 </body>
 </html>
