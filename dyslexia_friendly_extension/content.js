@@ -236,19 +236,15 @@ function applyDyslexiaStylesToSelection(selection) {
             return;
         }
         
-        // Store the original range and its content
         const range = selection.getRangeAt(0);
         const selectedContent = selection.toString();
         
-        // Create a new container for the highlighted text
         const container = document.createElement('span');
         container.className = 'readease-highlight-container';
         
-        // Create the text element with user's settings
         const textElement = document.createElement('span');
         textElement.className = 'readease-highlight-text';
         
-        // Apply the user's dyslexia-friendly settings
         textElement.style.fontFamily = getFontFamily(currentSettings.font || 'sans-serif');
         textElement.style.fontSize = `${currentSettings.fontSize || 16}px`;
         textElement.style.letterSpacing = `${currentSettings.letterSpacing || 0.12}em`;
@@ -260,10 +256,8 @@ function applyDyslexiaStylesToSelection(selection) {
         textElement.style.borderRadius = '3px';
         textElement.style.display = 'inline-block';
         
-        // Set the text content
         textElement.textContent = selectedContent;
         
-        // Create a floating toolbar that appears on hover
         const toolbarContainer = document.createElement('div');
         toolbarContainer.className = 'readease-highlight-toolbar';
         toolbarContainer.style.position = 'absolute';
@@ -279,9 +273,8 @@ function applyDyslexiaStylesToSelection(selection) {
         toolbarContainer.style.alignItems = 'center';
         toolbarContainer.style.gap = '4px';
         toolbarContainer.style.transition = 'opacity 0.2s ease';
-        toolbarContainer.style.opacity = '0';  // Start hidden
+        toolbarContainer.style.opacity = '0'; 
         
-        // Create close button for the toolbar
         const closeButton = document.createElement('button');
         closeButton.className = 'readease-highlight-close';
         closeButton.innerHTML = `
@@ -300,7 +293,6 @@ function applyDyslexiaStylesToSelection(selection) {
         closeButton.style.alignItems = 'center';
         closeButton.style.justifyContent = 'center';
         closeButton.addEventListener('click', () => {
-            // Restore original text and remove toolbar
             const parent = container.parentNode;
             if (parent) {
                 const originalText = document.createTextNode(selectedContent);
@@ -310,7 +302,6 @@ function applyDyslexiaStylesToSelection(selection) {
                     toolbarContainer.parentNode.removeChild(toolbarContainer);
                 }
                 
-                // Reset global reference if this was the current selection
                 if (selectionOverlay === container) {
                     selectionOverlay = null;
                 }
@@ -319,7 +310,6 @@ function applyDyslexiaStylesToSelection(selection) {
         
         toolbarContainer.appendChild(closeButton);
         
-        // Show/hide toolbar on hover
         container.addEventListener('mouseenter', () => {
             toolbarContainer.style.opacity = '1';
         });
@@ -328,46 +318,33 @@ function applyDyslexiaStylesToSelection(selection) {
             toolbarContainer.style.opacity = '0';
         });
         
-        // We need to clone the range first, so we can still have the original selection
         const highlightRange = range.cloneRange();
         
-        // Add the text element to the container
         container.appendChild(textElement);
         
-        // Only delete the contents after we've constructed our replacement
         highlightRange.deleteContents();
         
-        // Insert the container with the styled text
         highlightRange.insertNode(container);
         
-        // Add the toolbar to the body
         document.body.appendChild(toolbarContainer);
         
-        // Store reference for later positioning
         toolbarContainer.dataset.targetId = container.id = 'readease-highlight-' + Date.now();
         
-        // Position toolbar above the container
         function positionToolbar() {
             const rect = container.getBoundingClientRect();
             toolbarContainer.style.left = `${window.scrollX + rect.left + (rect.width / 2)}px`;
             toolbarContainer.style.top = `${window.scrollY + rect.top - 30}px`;
         }
         
-        // Initial positioning
         positionToolbar();
         
-        // Update position on scroll/resize
         window.addEventListener('scroll', positionToolbar, { passive: true });
         window.addEventListener('resize', positionToolbar, { passive: true });
         
-        // Store references for cleanup
         container.toolbarElement = toolbarContainer;
         selectionOverlay = container;
         
-        // Add action buttons to the toolbar based on enabled features
-        // We'll add them to the toolbar instead of a separate container
         
-        // If text-to-speech is enabled, add read-aloud button
         if (currentSettings.textToSpeechEnabled) {
             const readBtn = document.createElement('button');
             readBtn.className = 'readease-action-btn readease-tooltip';
@@ -379,7 +356,6 @@ function applyDyslexiaStylesToSelection(selection) {
             readBtn.style.color = '#3B82F6';
             readBtn.style.borderRadius = '3px';
             
-            // Use SVG icon for better quality
             readBtn.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
@@ -391,7 +367,6 @@ function applyDyslexiaStylesToSelection(selection) {
             toolbarContainer.appendChild(readBtn);
         }
         
-        // If rewrite is enabled, add simplify button
         if (currentSettings.rewriteEnabled) {
             const simplifyBtn = document.createElement('button');
             simplifyBtn.className = 'readease-action-btn readease-tooltip';
@@ -403,7 +378,6 @@ function applyDyslexiaStylesToSelection(selection) {
             simplifyBtn.style.color = '#3B82F6';
             simplifyBtn.style.borderRadius = '3px';
             
-            // Use SVG icon for better quality
             simplifyBtn.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 20h9"></path>
@@ -415,7 +389,6 @@ function applyDyslexiaStylesToSelection(selection) {
             toolbarContainer.appendChild(simplifyBtn);
         }
         
-        // If phonetics is enabled, add syllables button
         if (currentSettings.phoneticsEnabled) {
             const syllablesBtn = document.createElement('button');
             syllablesBtn.className = 'readease-action-btn readease-tooltip';
@@ -427,7 +400,6 @@ function applyDyslexiaStylesToSelection(selection) {
             syllablesBtn.style.color = '#3B82F6';
             syllablesBtn.style.borderRadius = '3px';
             
-            // Use SVG icon for better quality
             syllablesBtn.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
@@ -436,11 +408,10 @@ function applyDyslexiaStylesToSelection(selection) {
             `;
             
             syllablesBtn.addEventListener('click', () => {
-                // Create a popup for syllables
                 const syllablesPopup = document.createElement('div');
                 syllablesPopup.className = 'readease-syllables-popup';
                 syllablesPopup.style.position = 'absolute';
-                syllablesPopup.style.top = '30px'; // Position below the toolbar
+                syllablesPopup.style.top = '30px';
                 syllablesPopup.style.left = '50%';
                 syllablesPopup.style.transform = 'translateX(-50%)';
                 syllablesPopup.style.width = 'auto';
@@ -451,7 +422,6 @@ function applyDyslexiaStylesToSelection(selection) {
                 syllablesPopup.style.zIndex = '1002';
                 syllablesPopup.style.animation = 'readease-fade-in 0.2s ease-out';
                 
-                // Create header with title
                 const syllablesHeader = document.createElement('div');
                 syllablesHeader.style.display = 'flex';
                 syllablesHeader.style.alignItems = 'center';
@@ -508,7 +478,6 @@ function applyDyslexiaStylesToSelection(selection) {
                 loadingElement.style.color = '#6B7280';
                 loadingElement.style.fontSize = '14px';
                 
-                // Add loading spinner
                 loadingElement.innerHTML = `
                     <div style="
                         border: 2px solid #E5E7EB; 
@@ -523,20 +492,16 @@ function applyDyslexiaStylesToSelection(selection) {
                 `;
                 syllablesContainer.appendChild(loadingElement);
                 
-                // Add to document body for better positioning
                 document.body.appendChild(syllablesPopup);
                 
-                // Position near the toolbar
                 const rect = toolbarContainer.getBoundingClientRect();
                 syllablesPopup.style.top = `${window.scrollY + rect.bottom + 5}px`;
                 syllablesPopup.style.left = `${window.scrollX + rect.left + (rect.width / 2)}px`;
                 
-                // Get the syllables from the background script
                 chrome.runtime.sendMessage({
                     action: 'getPhoneticTranscription',
                     text: selectedContent
                 }, (response) => {
-                    // Remove loading indicator
                     loadingElement.remove();
                     
                     if (response && response.phoneticText) {
@@ -547,7 +512,6 @@ function applyDyslexiaStylesToSelection(selection) {
                         syllablesContent.style.margin = '12px 0';
                         
                         if (typeof response.phoneticText === 'object') {
-                            // Process and display each word/syllable pair
                             for (const [word, syllables] of Object.entries(response.phoneticText)) {
                                 const wordElem = document.createElement('div');
                                 wordElem.className = 'readease-syllable-word';
@@ -565,7 +529,6 @@ function applyDyslexiaStylesToSelection(selection) {
                                 syllablesContent.appendChild(wordElem);
                             }
                             
-                            // Add a "speak syllables" button
                             const speakSyllablesBtn = document.createElement('button');
                             speakSyllablesBtn.className = 'readease-btn';
                             speakSyllablesBtn.innerHTML = `
@@ -576,7 +539,6 @@ function applyDyslexiaStylesToSelection(selection) {
                                 Speak Syllables
                             `;
                             
-                            // Format for speech
                             let syllableSpeechText = '';
                             if (typeof response.phoneticText === 'object') {
                                 syllableSpeechText = Object.entries(response.phoneticText)
@@ -586,7 +548,6 @@ function applyDyslexiaStylesToSelection(selection) {
                             
                             speakSyllablesBtn.addEventListener('click', () => readTextAloud(syllableSpeechText || selectedContent));
                             
-                            // Create button container
                             const buttonContainer = document.createElement('div');
                             buttonContainer.style.marginTop = '16px';
                             buttonContainer.style.display = 'flex';
@@ -629,11 +590,9 @@ function applyDyslexiaStylesToSelection(selection) {
     }
 }
 
-// Helper function to make an element draggable
 function makeDraggable(element) {
     let offsetX = 0, offsetY = 0, isDragging = false;
     
-    // Only make the background and top area draggable (not the text itself)
     const dragHandle = element.querySelector('.readease-highlight-background');
     if (!dragHandle) return;
     
@@ -668,15 +627,12 @@ function makeDraggable(element) {
 }
 
 function updateSelectionOverlay() {
-    // Guard clauses to prevent errors
     if (!selectionOverlay) return;
     
     try {
-        // Find the text element
         const text = selectionOverlay.querySelector('.readease-highlight-text');
         
         if (text) {
-            // Update all style properties based on current settings
             text.style.fontFamily = getFontFamily(currentSettings.font || 'sans-serif');
             text.style.fontSize = `${currentSettings.fontSize || 16}px`;
             text.style.letterSpacing = `${currentSettings.letterSpacing || 0.12}em`;
@@ -685,7 +641,6 @@ function updateSelectionOverlay() {
             text.style.color = currentSettings.textColor || '#000000';
             text.style.backgroundColor = currentSettings.backgroundColor || '#f8f8f8';
             
-            // Update any additional CSS properties if needed
             text.style.padding = '2px 4px';
             text.style.borderRadius = '3px';
         }
@@ -755,11 +710,9 @@ function createProcessedTextBox(text, processedText, processType) {
     header.appendChild(closeBtn);
     container.appendChild(header);
     
-    // Main content area
     const content = document.createElement('div');
     content.className = 'dyslexia-processed-content';
     
-    // Apply user's dyslexia settings
     content.style.fontFamily = getFontFamily(currentSettings.font || 'sans-serif');
     content.style.fontSize = `${currentSettings.fontSize || 16}px`;
     content.style.letterSpacing = `${currentSettings.letterSpacing || 0.12}em`;
@@ -775,7 +728,6 @@ function createProcessedTextBox(text, processedText, processType) {
     } else if (processType === 'simplified') {
         content.textContent = processedText;
     } else if (processType === 'phonetic') {
-        // Handle phonetic display differently based on format
         if (typeof processedText === 'object') {
             const syllablesContent = document.createElement('div');
             syllablesContent.style.display = 'flex';
@@ -807,12 +759,10 @@ function createProcessedTextBox(text, processedText, processType) {
     
     container.appendChild(content);
     
-    // Add action buttons for non-loading states
     if (processType !== 'loading') {
         const actions = document.createElement('div');
         actions.className = 'readease-actions';
         
-        // Read aloud button if enabled
         if (currentSettings.textToSpeechEnabled) {
             const readBtn = document.createElement('button');
             readBtn.className = 'readease-btn';
@@ -825,7 +775,6 @@ function createProcessedTextBox(text, processedText, processType) {
             `;
             readBtn.addEventListener('click', () => {
                 if (processType === 'phonetic' && typeof processedText === 'object') {
-                    // Format for speech
                     const syllableSpeechText = Object.entries(processedText)
                         .map(([word, syllables]) => `${word}: ${syllables.replace(/-/g, ', ')}`)
                         .join('. ');
@@ -840,10 +789,8 @@ function createProcessedTextBox(text, processedText, processType) {
         container.appendChild(actions);
     }
     
-    // Add to document
     document.body.appendChild(container);
     
-    // Position near current selection or center of viewport
     const selection = window.getSelection();
     if (selection && selection.rangeCount) {
         const rect = selection.getRangeAt(0).getBoundingClientRect();
@@ -857,7 +804,6 @@ function createProcessedTextBox(text, processedText, processType) {
         container.style.transform = 'translateX(-50%)';
     }
     
-    // Make container draggable by header
     header.style.cursor = 'move';
     let isDragging = false;
     let offsetX, offsetY;
@@ -883,7 +829,6 @@ function createProcessedTextBox(text, processedText, processType) {
     return container;
 }
 
-// Toast notification for errors/messages
 function showToast(message, type = 'error') {
     const toast = document.createElement('div');
     toast.className = `readease-toast readease-toast-${type}`;

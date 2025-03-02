@@ -1,6 +1,5 @@
-/* Professional UI styles for ReadEase extension */
+/* UI styles for ReadEase extension */
 
-/* Design tokens - unified color system */
 :root {
   --readease-primary: #3B82F6;
   --readease-primary-light: #93C5FD;
@@ -27,14 +26,12 @@
   --readease-z-tooltip: 3000;
 }
 
-/* Base styles for all ReadEase elements */
 .readease-element {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   box-sizing: border-box;
   line-height: 1.5;
 }
 
-/* Animation keyframes */
 @keyframes readease-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -56,7 +53,6 @@
   100% { transform: scale(1); }
 }
 
-/* Confirmation dialog */
 .readease-confirm-dialog {
   position: absolute;
   z-index: var(--readease-z-popup);
@@ -87,7 +83,6 @@
   gap: 8px;
 }
 
-/* Toast notifications */
 .readease-toast {
   position: fixed;
   bottom: 20px;
@@ -134,7 +129,6 @@
   vertical-align: middle;
 }
 
-/* Selection highlight container */
 .readease-highlight-container {
   display: inline-block;
   position: relative; 
@@ -161,7 +155,6 @@
   cursor: pointer;
 }
 
-/* Processing container styles - indicates text being processed but maintains format */
 .readease-processing-container {
   display: inline;
   position: relative;
@@ -190,7 +183,6 @@
   100% { background-position: 0 0; }
 }
 
-/* Floating toolbar buttons */
 .readease-toolbar-btn {
   background: transparent;
   border: none;
@@ -225,7 +217,6 @@
   font-weight: 400;
 }
 
-/* Toolbar with action buttons */
 .readease-actions {
   display: flex;
   align-items: center;
@@ -268,7 +259,6 @@
   box-shadow: 0 0 0 2px var(--readease-primary-light);
 }
 
-/* Control buttons */
 .readease-highlight-close {
   position: absolute;
   top: 8px;
@@ -295,7 +285,6 @@
   color: var(--readease-error);
 }
 
-/* Syllables breakdown container */
 .readease-syllables-container {
   background-color: var(--readease-surface);
   border-radius: var(--readease-radius-md);
@@ -338,7 +327,6 @@
   margin-top: 4px;
 }
 
-/* Processed text container */
 .dyslexia-processed-text {
   background-color: var(--readease-surface);
   border-radius: var(--readease-radius-lg);
@@ -380,7 +368,6 @@
   color: var(--readease-text-primary);
 }
 
-/* Loading indicators */
 .readease-loading {
   display: flex;
   align-items: center;
@@ -405,7 +392,6 @@
   to { transform: rotate(360deg); }
 }
 
-/* Buttons */
 .readease-btn {
   display: inline-flex;
   align-items: center;
@@ -437,7 +423,6 @@
   background-color: rgba(59, 130, 246, 0.05);
 }
 
-/* Tooltip */
 .readease-tooltip {
   position: relative;
 }
@@ -465,7 +450,6 @@
   bottom: calc(100% + 5px);
 }
 
-/* Legacy elements - for backward compatibility */
 #dyslexia-selection-overlay {
   position: absolute;
   z-index: -1;
@@ -503,7 +487,6 @@
   color: var(--readease-text-secondary);
 }
 
-/* Browser toggle button */
 .browser-toggle {
   position: fixed;
   top: 0;

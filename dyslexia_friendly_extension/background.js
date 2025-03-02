@@ -89,12 +89,10 @@ chrome.runtime.onStartup.addListener(() => {
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === "dyslexiaFriendly") {
-        // First ensure the content script has the latest settings
         chrome.tabs.sendMessage(tab.id, {
             action: 'updateSettings',
             settings: currentSettings
         }, () => {
-            // Then send the command to apply styles to the selection
             chrome.tabs.sendMessage(tab.id, {
                 action: 'applyDyslexiaStyles',
                 text: info.selectionText
@@ -154,7 +152,6 @@ function getExtensionState(callback) {
 }
 
 function updateExtensionIcon(isEnabled) {
-    // Set icon based on enabled/disabled state
     if (isEnabled) {
         chrome.action.setIcon({
             path: {
@@ -165,7 +162,6 @@ function updateExtensionIcon(isEnabled) {
         });
         chrome.action.setBadgeText({ text: "" });
     } else {
-        // For disabled state, we'll use grayscale icon and an OFF badge
         chrome.action.setIcon({
             path: {
                 "16": "icons/icon16-disabled.png",
@@ -257,8 +253,6 @@ function updateAllTabs() {
                     settings: currentSettings
                 }, (response) => {
                     if (chrome.runtime.lastError) {
-                        // This is normal for tabs that don't have the content script loaded
-                        // We can safely ignore this error
                     }
                 });
             } catch (error) {
@@ -311,10 +305,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         
         sendResponse({status: 'success'});
     } else if (message.action === 'updateApiKeys') {
-        // Update API keys in memory
         apiKeys = message.apiKeys || {};
         
-        // Save to storage
         chrome.storage.sync.set({apiKeys: apiKeys});
         
         console.log('API keys updated:', apiKeys);
@@ -439,11 +431,9 @@ async function saveSettingsToServer(settings) {
     }
 }
 
-// Removed processTextForDyslexia function - now handled by content script
 
 async function processTextWithOpenAI(text, model, level, purpose) {
     try {
-        // First get the API key
         const apiKey = apiKeys.openai;
         if (!apiKey || apiKey.trim() === '') {
             throw new Error('No OpenAI API key available. Please add your API key in the extension settings (API tab).');

@@ -1,14 +1,12 @@
-/* ReadEase Popup Styles */
 
-/* Color variables */
 :root {
-  --readease-primary: #3B82F6;  /* Blue */
+  --readease-primary: #3B82F6; 
   --readease-primary-light: #93C5FD;
   --readease-primary-dark: #2563EB;
-  --readease-accent: #F59E0B;   /* Amber */
-  --readease-success: #10B981;  /* Green */
-  --readease-error: #EF4444;    /* Red */
-  --readease-surface: #F9FAFB;  /* Light gray */
+  --readease-accent: #F59E0B;   
+  --readease-success: #10B981;  
+  --readease-error: #EF4444;    
+  --readease-surface: #F9FAFB; 
   --readease-surface-hover: #F3F4F6;
   --readease-text-primary: #1F2937;
   --readease-text-secondary: #6B7280;
@@ -18,7 +16,6 @@
   --readease-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
-/* Message styles */
 .message {
   padding: 10px 12px;
   margin: 8px 0;
@@ -59,7 +56,6 @@
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
-/* Font selection and preview */
 #font-select {
   width: 100%;
   padding: 8px 12px;
@@ -98,7 +94,6 @@
 #font-select option[value="calibri"] { font-family: Calibri, sans-serif; }
 #font-select option[value="century-gothic"] { font-family: "Century Gothic", sans-serif; }
 
-/* Font Preview Dialog */
 .font-preview-container {
   margin: 16px 0;
   border: 1px solid var(--readease-border);
@@ -147,7 +142,6 @@
   line-height: 1.5;
 }
 
-/* Additional UI improvements */
 .container {
   width: 380px;
   overflow: hidden;
@@ -227,7 +221,6 @@ header h1 {
   margin-bottom: 16px;
 }
 
-/* Sliders and inputs */
 input[type="range"] {
   -webkit-appearance: none;
   width: 100%;
@@ -254,7 +247,6 @@ input[type="range"]::-webkit-slider-thumb:hover {
   transform: scale(1.1);
 }
 
-/* Switch toggle */
 .switch {
   position: relative;
   display: inline-block;
@@ -305,7 +297,6 @@ input:checked + .slider:before {
   transform: translateX(20px);
 }
 
-/* Small switch variant */
 .switch.small {
   width: 34px;
   height: 18px;
@@ -322,7 +313,6 @@ input:checked + .slider.small:before {
   transform: translateX(16px);
 }
 
-/* Animations */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
