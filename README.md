@@ -20,7 +20,7 @@ A Chrome extension to assist readers with dyslexia by providing various tools to
 
 1. Clone the repository:
 ```
-git clone https://github.com/mmokin/Dyslexia-Text-Reader
+git clone -b final https://github.com/mmokin/Dyslexia-Text-Reader
 cd Dyslexia-Text-Reader
 ```
 
