@@ -7,21 +7,17 @@ let domReady = false;
 let previousSelection = '';
 let selectionConfirmDialog = null;
 
-// Function to check if DOM is fully loaded
 function isDOMReady() {
     return document.readyState === 'complete' || document.readyState === 'interactive';
 }
 
-// Wait for DOM to be fully loaded before initializing
 function waitForDOM() {
     return new Promise(resolve => {
         if (isDOMReady()) {
             resolve();
         } else {
             document.addEventListener('DOMContentLoaded', () => resolve());
-            // Fallback if DOMContentLoaded has already fired
             window.addEventListener('load', () => resolve());
-            // Additional safety timeout
             setTimeout(resolve, 1000);
         }
     });
@@ -29,7 +25,6 @@ function waitForDOM() {
 
 (async function init() {
     try {
-        // Ensure DOM is ready before initializing
         await waitForDOM();
         domReady = true;
         
@@ -65,30 +60,25 @@ function waitForDOM() {
                     
                     sendResponse({status: 'success'});
                 } else if (message.action === 'applyDyslexiaStyles') {
-                    // Handle right-click "Make Dyslexia Friendly" option
                     if (!extensionEnabled) {
                         sendResponse({status: 'error', error: 'Extension is disabled'});
                         return true;
                     }
                     
-                    // Create a mock selection object with the text
                     const mockSelection = {
                         toString: () => message.text,
                         isCollapsed: false,
                         rangeCount: 1,
                         getRangeAt: (i) => {
-                            // Use the actual selection if available
                             const realSelection = window.getSelection();
                             if (realSelection && realSelection.rangeCount > 0) {
                                 return realSelection.getRangeAt(0);
                             }
                             
-                            // Create a mock range as fallback
                             return document.createRange();
                         }
                     };
                     
-                    // Directly apply styles without showing confirmation dialog
                     applyDyslexiaStylesToSelection(mockSelection);
                     sendResponse({status: 'success'});
                 } else if (message.action === 'readAloud') {
@@ -182,18 +172,15 @@ function handleTextSelection(event) {
     const selection = window.getSelection();
     const selectedText = selection ? selection.toString().trim() : '';
     
-    // If text is selected, store it (but don't apply any styles or show confirmation)
-    // The user will need to use the right-click context menu to apply styles
+
     if (selection && !selection.isCollapsed && selectedText) {
         previousSelection = selectedText;
         
-        // Update context menu availability via the background script
         chrome.runtime.sendMessage({
             action: 'updateContextMenu',
             hasSelection: true
         });
     } else if (event && event.type === 'mouseup') {
-        // When mouse is released without text, update menu state
         chrome.runtime.sendMessage({
             action: 'updateContextMenu',
             hasSelection: false
@@ -201,22 +188,17 @@ function handleTextSelection(event) {
     }
 }
 
-// Create confirmation dialog after text selection
-// No longer showing confirmation dialog - now only using context menu for direct actions
+
 function showSelectionConfirmationDialog(text, selection) {
-    // This function is kept for backwards compatibility
-    // but no longer shows the confirmation dialog
     return;
 }
 
 function handleKeyboardShortcuts(event) {
     if (!extensionEnabled) return;
     
-    // Check for Ctrl+Shift+L (text-to-speech)
     if (event.ctrlKey && event.shiftKey && event.key === 'L') {
         event.preventDefault();
         
-        // Check if text-to-speech is enabled in settings
         if (!currentSettings.textToSpeechEnabled) {
             console.log('Text-to-speech is disabled in settings');
             return;
@@ -233,23 +215,19 @@ function handleKeyboardShortcuts(event) {
 }
 
 function applyDyslexiaStylesToSelection(selection) {
-    // First do safety checks
     if (!selection || !document.body || !domReady) {
         console.error('Cannot apply styles: selection, document.body, or DOM not ready');
         return;
     }
     
-    // Remove existing highlighting elements
     const existingHighlights = document.querySelectorAll('.readease-highlight-container');
     existingHighlights.forEach(el => {
-        // Also remove associated toolbars before removing highlight
         if (el.toolbarElement && el.toolbarElement.parentNode) {
             el.toolbarElement.parentNode.removeChild(el.toolbarElement);
         }
         el.remove();
     });
     
-    // Reset global overlay reference
     selectionOverlay = null;
     
     try {
@@ -497,7 +475,6 @@ function applyDyslexiaStylesToSelection(selection) {
                     Syllable Breakdown
                 `;
                 
-                // Add close button for syllables
                 const syllablesCloseBtn = document.createElement('button');
                 syllablesCloseBtn.style.background = 'transparent';
                 syllablesCloseBtn.style.border = 'none';
@@ -518,13 +495,11 @@ function applyDyslexiaStylesToSelection(selection) {
                 syllablesHeader.appendChild(syllablesCloseBtn);
                 syllablesPopup.appendChild(syllablesHeader);
                 
-                // Create syllables content container
                 const syllablesContainer = document.createElement('div');
                 syllablesContainer.className = 'readease-syllables-content';
                 syllablesContainer.style.padding = '12px';
                 syllablesPopup.appendChild(syllablesContainer);
                 
-                // Loading indicator
                 const loadingElement = document.createElement('div');
                 loadingElement.style.display = 'flex';
                 loadingElement.style.alignItems = 'center';
