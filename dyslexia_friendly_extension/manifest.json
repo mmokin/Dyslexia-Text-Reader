@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "Dyslexia Friendly Text",
+    "name": "ReadEase",
     "version": "1.0",
     "description": "Enhance readability by processing text.",
     "permissions": ["contextMenus", "activeTab", "scripting", "storage"],
@@ -16,7 +16,17 @@
     ],
     "action": {
       "default_popup": "popup.html",
-      "default_icon": "icon.png"
+      "default_title": "ReadEase",
+      "default_icon": {
+        "16": "icon16.png",
+        "24": "icon48.png",
+        "32": "icon128.png"
+      }
+    },
+    "icons": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
     }
 }
   

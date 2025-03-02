@@ -8,4 +8,8 @@ h2 {
     font-size: 18px;
     color: #333;
 }
+@font-face {
+    font-family: 'OpenDyslexic';
+    src: url(OpenDyslexic-Regular.woff);
+}
   
