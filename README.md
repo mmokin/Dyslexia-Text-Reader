@@ -40,6 +40,10 @@ CORS_ORIGIN=chrome-extension://
 
 4. Start the server:
 ```
+npm start
+```
+OR
+```
 npm run dev
 ```
 
