@@ -135,10 +135,16 @@ function updateAllTabs() {
 // Context menu click handler
 chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === "dyslexiaFriendly") {
-        chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            function: processTextForDyslexia,
-            args: [info.selectionText, currentSettings]
+        // Get current settings and API key to pass to the injected script
+        chrome.storage.sync.get(['dyslexiaSettings', 'apiKeys'], (data) => {
+            const settings = data.dyslexiaSettings || currentSettings;
+            const apiKey = data.apiKeys && data.apiKeys.openai ? data.apiKeys.openai : null;
+            
+            chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                function: injectTextProcessor,
+                args: [info.selectionText, settings, apiKey]
+            });
         });
     } else if (info.menuItemId === "readAloud") {
         chrome.tabs.sendMessage(tab.id, {
@@ -152,6 +158,162 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         });
     }
 });
+
+// This function contains all necessary code to process text
+// and will be injected into the page context
+function injectTextProcessor(selectedText, settings, apiKey) {
+    if (!selectedText) return;
+    
+    processTextForDyslexia(selectedText, settings, apiKey);
+    
+    // Process text for dyslexia
+    async function processTextForDyslexia(text, settings, apiKey) {
+        if (!text) return;
+        
+        if (settings.rewriteEnabled) {
+            try {
+                const newText = await processTextWithOpenAI(text, settings.aiModel, settings.simplificationLevel, "rewrite", apiKey);
+                replaceHighlightedText(newText, settings.font);
+            } catch (error) {
+                console.error('Error processing text:', error);
+                // Fallback to original text with styling
+                replaceHighlightedText(text, settings.font);
+            }
+        } else {
+            // Just apply styling without rewriting
+            replaceHighlightedText(text, settings.font);
+        }
+    }
+    
+    // Process text with OpenAI models
+    async function processTextWithOpenAI(text, model, level, purpose, apiKey) {
+        // Check if API key is available
+        if (!apiKey) {
+            throw new Error('No OpenAI API key available. Please add your API key in the settings.');
+        }
+        
+        let systemPrompt;
+        
+        // Set purpose-specific instructions
+        if (purpose === "rewrite") {
+            switch (level) {
+                case 'low':
+                    systemPrompt = "You are a helpful assistant that rewrites text to be more readable and dyslexia-friendly. Make minor changes to improve readability while keeping most of the original text.";
+                    break;
+                case 'high':
+                    systemPrompt = "You are a helpful assistant that rewrites text to be more readable and dyslexia-friendly. Significantly simplify the text, focusing on clarity and ease of reading for someone with dyslexia.";
+                    break;
+                case 'medium':
+                default:
+                    systemPrompt = "You are a helpful assistant that rewrites text to be more readable and dyslexia-friendly. Text should be summarized, written in active voice.";
+            }
+        } else if (purpose === "simplify") {
+            switch (level) {
+                case 'low':
+                    systemPrompt = "You are a helpful assistant that simplifies text for people with dyslexia. Replace a few complex words with simpler alternatives while maintaining most of the original text.";
+                    break;
+                case 'high':
+                    systemPrompt = "You are a helpful assistant that simplifies text for people with dyslexia. Replace all complex words with simpler alternatives and break down complex sentences into shorter, clearer ones.";
+                    break;
+                case 'medium':
+                default:
+                    systemPrompt = "You are a helpful assistant that simplifies text for people with dyslexia. Replace complex words with simpler alternatives and break down difficult sentences into more readable ones.";
+            }
+        } else if (purpose === "phonetic") {
+            systemPrompt = "You are a helpful assistant that provides phonetic transcriptions of words. Break down the given words into syllables with hyphens. Format your response as a JSON object where each key is a word and its value is the syllable breakdown, for example: {\"example\": \"ex-am-ple\", \"syllable\": \"syl-la-ble\"}";
+        }
+        
+        // Configure API call
+        const endpoint = 'https://api.openai.com/v1/chat/completions';
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+        };
+        
+        let userPrompt;
+        if (purpose === "phonetic") {
+            userPrompt = `Provide syllable breakdowns for the following text. Respond with a JSON object only, no explanations: "${text}"`;
+        } else {
+            userPrompt = `${text}`;
+        }
+        
+        const body = JSON.stringify({
+            model: model,
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+            ],
+            max_tokens: 1000
+        });
+        
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: headers,
+                body: body
+            });
+            
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status} ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            const result = data.choices[0].message.content;
+            
+            // If this is a phonetic request, parse the JSON response
+            if (purpose === "phonetic") {
+                try {
+                    return JSON.parse(result);
+                } catch (e) {
+                    console.error('Error parsing phonetic JSON response:', e);
+                    return result; // Return the raw text if JSON parsing fails
+                }
+            }
+            
+            return result;
+        } catch (error) {
+            console.error(`Error with OpenAI API:`, error);
+            throw error;
+        }
+    }
+    
+    // Replace the highlighted text with the new text
+    function replaceHighlightedText(newText, fontFamily) {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+        
+        const range = selection.getRangeAt(0);
+        const span = document.createElement("span");
+        span.classList.add('dyslexia-processed');
+        span.textContent = newText.trim();
+        
+        span.style.fontFamily = getFontFamily(fontFamily);
+        span.style.letterSpacing = `${settings.letterSpacing}em`;
+        span.style.wordSpacing = `${settings.wordSpacing}em`;
+        span.style.lineHeight = settings.lineSpacing;
+        span.style.color = settings.textColor || '#000000';
+        span.style.backgroundColor = settings.backgroundColor || '#f8f8f8';
+        span.style.padding = '2px 4px';
+        span.style.borderRadius = '2px';
+        
+        range.deleteContents();
+        range.insertNode(span);
+    }
+    
+    function getFontFamily(fontChoice) {
+        switch (fontChoice) {
+            case 'open-dyslexic':
+                return '"OpenDyslexic", sans-serif';
+            case 'comic-sans':
+                return '"Comic Sans MS", cursive';
+            case 'arial':
+                return 'Arial, sans-serif';
+            case 'sans-serif':
+            default:
+                return 'sans-serif';
+        }
+    }
+}
 
 // Message handler
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -230,6 +392,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 console.error('Error getting phonetic transcription:', error);
                 sendResponse({error: error.message});
             });
+    } else if (message.action === 'checkLoginStatus') {
+        // Handle check login status request
+        (async () => {
+            try {
+                const response = await fetch('http://localhost:3000/api/auth/status', {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: {
+                        'Origin': chrome.runtime.getURL(''),
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    sendResponse(data);
+                } else {
+                    sendResponse({isLoggedIn: false, error: 'Failed to check login status'});
+                }
+            } catch (error) {
+                console.error('Error checking login status:', error);
+                sendResponse({isLoggedIn: false, error: error.message});
+            }
+        })();
+        return true; // Keep the message channel open for async response
     } else if (message.action === 'login') {
         // Handle login
         loginUser(message.username, message.password)
@@ -292,169 +479,30 @@ async function saveSettingsToServer(settings) {
     }
 }
 
-// Process text for dyslexia
-async function processTextForDyslexia(selectedText, settings) {
-    if (!selectedText) return;
-    
-    if (settings.rewriteEnabled) {
-        try {
-            const newText = await processTextWithOpenAI(selectedText, settings.aiModel, settings.simplificationLevel, "rewrite");
-            replaceHighlightedText(newText, settings.font);
-        } catch (error) {
-            console.error('Error processing text:', error);
-            // Fallback to original text with styling
-            replaceHighlightedText(selectedText, settings.font);
-        }
-    } else {
-        // Just apply styling without rewriting
-        replaceHighlightedText(selectedText, settings.font);
-    }
-    
-    // Define replaceHighlightedText function
-    function replaceHighlightedText(newText, fontFamily) {
-        const selection = window.getSelection();
-        if (!selection.rangeCount) return;
-        
-        const range = selection.getRangeAt(0);
-        const span = document.createElement("span");
-        span.classList.add('dyslexia-processed');
-        span.textContent = newText.trim();
-        
-        span.style.fontFamily = getFontFamily(fontFamily);
-        span.style.letterSpacing = `${settings.letterSpacing}em`;
-        span.style.wordSpacing = `${settings.wordSpacing}em`;
-        span.style.lineHeight = settings.lineSpacing;
-        
-        range.deleteContents();
-        range.insertNode(span);
-    }
-    
-    function getFontFamily(fontChoice) {
-        switch (fontChoice) {
-            case 'open-dyslexic':
-                return '"OpenDyslexic", sans-serif';
-            case 'comic-sans':
-                return '"Comic Sans MS", cursive';
-            case 'arial':
-                return 'Arial, sans-serif';
-            case 'sans-serif':
-            default:
-                return 'sans-serif';
-        }
-    }
-}
-
-// Process text with OpenAI models
-async function processTextWithOpenAI(text, model, level, purpose) {
-    // Get API key
-    const apiKey = apiKeys.openai;
-    if (!apiKey) {
-        throw new Error('No OpenAI API key available. Please add your API key in the settings.');
-    }
-    
-    let systemPrompt;
-    
-    // Set purpose-specific instructions
-    if (purpose === "rewrite") {
-        switch (level) {
-            case 'low':
-                systemPrompt = "You are a helpful assistant that rewrites text to be more readable and dyslexia-friendly. Make minor changes to improve readability while keeping most of the original text.";
-                break;
-            case 'high':
-                systemPrompt = "You are a helpful assistant that rewrites text to be more readable and dyslexia-friendly. Significantly simplify the text, focusing on clarity and ease of reading for someone with dyslexia.";
-                break;
-            case 'medium':
-            default:
-                systemPrompt = "You are a helpful assistant that rewrites text to be more readable and dyslexia-friendly. Text should be summarized, written in active voice.";
-        }
-    } else if (purpose === "simplify") {
-        switch (level) {
-            case 'low':
-                systemPrompt = "You are a helpful assistant that simplifies text for people with dyslexia. Replace a few complex words with simpler alternatives while maintaining most of the original text.";
-                break;
-            case 'high':
-                systemPrompt = "You are a helpful assistant that simplifies text for people with dyslexia. Replace all complex words with simpler alternatives and break down complex sentences into shorter, clearer ones.";
-                break;
-            case 'medium':
-            default:
-                systemPrompt = "You are a helpful assistant that simplifies text for people with dyslexia. Replace complex words with simpler alternatives and break down difficult sentences into more readable ones.";
-        }
-    } else if (purpose === "phonetic") {
-        systemPrompt = "You are a helpful assistant that provides phonetic transcriptions of words. Break down the given words into syllables with hyphens. Format your response as a JSON object where each key is a word and its value is the syllable breakdown, for example: {\"example\": \"ex-am-ple\", \"syllable\": \"syl-la-ble\"}";
-    }
-    
-    // Configure API call
-    const endpoint = 'https://api.openai.com/v1/chat/completions';
-    const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-    };
-    
-    let userPrompt;
-    if (purpose === "phonetic") {
-        userPrompt = `Provide syllable breakdowns for the following text. Respond with a JSON object only, no explanations: "${text}"`;
-    } else {
-        userPrompt = `${text}`;
-    }
-    
-    const body = JSON.stringify({
-        model: model,
-        messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt }
-        ],
-        max_tokens: 1000
-    });
-    
-    try {
-        const response = await fetch(endpoint, {
-            method: 'POST',
-            headers: headers,
-            body: body
-        });
-        
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status} ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        const result = data.choices[0].message.content;
-        
-        // If this is a phonetic request, parse the JSON response
-        if (purpose === "phonetic") {
-            try {
-                return JSON.parse(result);
-            } catch (e) {
-                console.error('Error parsing phonetic JSON response:', e);
-                return result; // Return the raw text if JSON parsing fails
-            }
-        }
-        
-        return result;
-    } catch (error) {
-        console.error(`Error with OpenAI API:`, error);
-        throw error;
-    }
-}
-
 // User authentication functions
 async function loginUser(username, password) {
     try {
+        console.log('Attempting login for user:', username);
+        
         const response = await fetch('http://localhost:3000/api/auth/login', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Origin': chrome.runtime.getURL(''),
+                'Accept': 'application/json'
             },
             credentials: 'include',
             body: JSON.stringify({username, password})
         });
         
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Login failed');
-        }
+        console.log('Login response status:', response.status);
         
         const data = await response.json();
+        console.log('Login response data:', data);
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Login failed');
+        }
         
         // Update user ID in settings
         currentSettings.userId = data.userId;
@@ -463,50 +511,70 @@ async function loginUser(username, password) {
         // Fetch user settings
         await fetchUserSettings(data.userId);
         
-        return {success: true, userId: data.userId};
+        return {success: true, userId: data.userId, username: data.username};
     } catch (error) {
         console.error('Login error:', error);
-        return {success: false, error: error.message};
+        return {success: false, error: error.message || 'An unknown error occurred during login'};
     }
 }
 
 async function logoutUser() {
     try {
-        await fetch('http://localhost:3000/api/auth/logout', {
+        console.log('Attempting logout');
+        
+        const response = await fetch('http://localhost:3000/api/auth/logout', {
             method: 'POST',
-            credentials: 'include'
+            credentials: 'include',
+            headers: {
+                'Origin': chrome.runtime.getURL(''),
+                'Accept': 'application/json'
+            }
         });
         
-        // Clear user ID from settings
+        console.log('Logout response status:', response.status);
+        
+        // Clear user ID from settings regardless of server response
         currentSettings.userId = null;
         chrome.storage.sync.set({dyslexiaSettings: currentSettings});
         
         return {success: true};
     } catch (error) {
         console.error('Logout error:', error);
+        
+        // Still clear user ID locally even if server request fails
+        currentSettings.userId = null;
+        chrome.storage.sync.set({dyslexiaSettings: currentSettings});
+        
         return {success: false, error: error.message};
     }
 }
 
 async function registerUser(username, password, email) {
     try {
+        console.log('Attempting registration for user:', username);
+        
         const response = await fetch('http://localhost:3000/api/auth/register', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Origin': chrome.runtime.getURL(''),
+                'Accept': 'application/json'
             },
             body: JSON.stringify({username, password, email})
         });
         
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Registration failed');
-        }
+        console.log('Registration response status:', response.status);
         
         const data = await response.json();
-        return {success: true, userId: data.userId};
+        console.log('Registration response data:', data);
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Registration failed');
+        }
+        
+        return {success: true, userId: data.userId, message: 'Registration successful'};
     } catch (error) {
         console.error('Registration error:', error);
-        return {success: false, error: error.message};
+        return {success: false, error: error.message || 'An unknown error occurred during registration'};
     }
 }

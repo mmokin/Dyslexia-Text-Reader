@@ -407,23 +407,20 @@ function saveApiKey() {
 // Check login status
 async function checkLoginStatus() {
     try {
-        const response = await fetch('http://localhost:3000/api/auth/status', {
-            method: 'GET',
-            credentials: 'include'
+        // Use message passing to background script instead of direct fetch
+        const response = await chrome.runtime.sendMessage({
+            action: 'checkLoginStatus'
         });
         
-        if (response.ok) {
-            const data = await response.json();
-            if (data.isLoggedIn && data.userId) {
-                isLoggedIn = true;
-                currentUser = {
-                    username: data.username,
-                    email: data.email,
-                    userId: data.userId
-                };
-                
-                showUserProfile();
-            }
+        if (response && response.isLoggedIn) {
+            isLoggedIn = true;
+            currentUser = {
+                username: response.username,
+                email: response.email,
+                userId: response.userId
+            };
+            
+            showUserProfile();
         }
     } catch (error) {
         console.error('Error checking login status:', error);
