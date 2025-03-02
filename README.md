@@ -80,13 +80,5 @@ To use the AI text processing features, you'll need to add your own API key:
 ## Keyboard Shortcuts
 
 - **Ctrl+Shift+D**: Toggle extension on/off
-- **Ctrl+Shift+R**: Read selected text aloud
+- **Ctrl+Shift+L**: Read selected text aloud
 - **Ctrl+Shift+S**: Simplify selected text
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.

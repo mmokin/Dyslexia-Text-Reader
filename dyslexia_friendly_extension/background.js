@@ -1,4 +1,3 @@
-// Global variables
 let extensionEnabled = false;
 let apiKeys = {};
 let currentSettings = {
@@ -17,12 +16,37 @@ let currentSettings = {
     userId: null
 };
 
-// Extension initialization
-chrome.runtime.onInstalled.addListener(async () => {
-    // Initialize extension state
-    await loadSettings();
+chrome.runtime.onInstalled.addListener(() => {
+    chrome.storage.sync.get('dyslexiaExtensionEnabled', (data) => {
+        if (data.dyslexiaExtensionEnabled === undefined) {
+            chrome.storage.sync.set({dyslexiaExtensionEnabled: true});
+            extensionEnabled = true;
+        } else {
+            extensionEnabled = data.dyslexiaExtensionEnabled;
+        }
+        updateExtensionIcon(extensionEnabled);
+    });
     
-    // Create context menu items
+    chrome.storage.sync.get('dyslexiaSettings', (data) => {
+        if (!data.dyslexiaSettings) {
+            const defaultSettings = {
+                font: 'sans-serif',
+                fontSize: 16,
+                letterSpacing: 0.12,
+                wordSpacing: 0.16,
+                lineSpacing: 1.5,
+                textColor: '#000000',
+                backgroundColor: '#f8f8f8',
+                rewriteEnabled: true,
+                textToSpeechEnabled: true,
+                aiModel: 'gpt-4o',
+                simplificationLevel: 'medium',
+                phoneticsEnabled: false
+            };
+            chrome.storage.sync.set({dyslexiaSettings: defaultSettings});
+        }
+    });
+    
     chrome.contextMenus.create({
         id: "dyslexiaFriendly",
         title: "Make Dyslexia Friendly",
@@ -41,100 +65,28 @@ chrome.runtime.onInstalled.addListener(async () => {
         contexts: ["selection"]
     });
     
-    // Check if user is logged in
-    await checkLoginStatus();
+    chrome.contextMenus.create({
+        id: "toggleExtension",
+        title: "Toggle Extension On/Off",
+        contexts: ["page"]
+    });
 });
 
-// Load settings from storage
-async function loadSettings() {
-    return new Promise((resolve) => {
-        chrome.storage.sync.get(['dyslexiaSettings', 'extensionEnabled', 'apiKeys'], (data) => {
-            if (data.dyslexiaSettings) {
-                currentSettings = data.dyslexiaSettings;
-            } else {
-                // Save default settings if none exist
-                chrome.storage.sync.set({dyslexiaSettings: currentSettings});
-            }
-            
-            if (data.extensionEnabled !== undefined) {
-                extensionEnabled = data.extensionEnabled;
-            } else {
-                chrome.storage.sync.set({extensionEnabled: extensionEnabled});
-            }
-            
-            if (data.apiKeys) {
-                apiKeys = data.apiKeys;
-            }
-            
-            resolve();
-        });
+chrome.runtime.onStartup.addListener(() => {
+    chrome.storage.sync.get('dyslexiaExtensionEnabled', (data) => {
+        extensionEnabled = data.dyslexiaExtensionEnabled !== undefined ? data.dyslexiaExtensionEnabled : true;
+        updateExtensionIcon(extensionEnabled);
     });
-}
+    
+    loadSettings();
+});
 
-// Check if user is logged in
-async function checkLoginStatus() {
-    try {
-        const response = await fetch('http://localhost:3000/api/auth/status', {
-            method: 'GET',
-            credentials: 'include'
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            if (data.isLoggedIn && data.userId) {
-                currentSettings.userId = data.userId;
-                
-                // Get user settings from server
-                await fetchUserSettings(data.userId);
-            }
-        }
-    } catch (error) {
-        console.error('Error checking login status:', error);
-    }
-}
-
-// Fetch user settings from server
-async function fetchUserSettings(userId) {
-    try {
-        const response = await fetch(`http://localhost:3000/api/settings/${userId}`, {
-            method: 'GET',
-            credentials: 'include'
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            if (data.settings) {
-                // Update local settings with server settings
-                currentSettings = {...currentSettings, ...data.settings};
-                // Save to local storage
-                chrome.storage.sync.set({dyslexiaSettings: currentSettings});
-                
-                // Update all tabs with new settings
-                updateAllTabs();
-            }
-        }
-    } catch (error) {
-        console.error('Error fetching user settings:', error);
-    }
-}
-
-// Update all open tabs with current settings
-function updateAllTabs() {
-    chrome.tabs.query({}, (tabs) => {
-        tabs.forEach((tab) => {
-            chrome.tabs.sendMessage(tab.id, {
-                action: 'updateSettings',
-                settings: currentSettings
-            }).catch(() => {
-                // Ignore errors for tabs that don't have content script
-            });
-        });
-    });
-}
-
-// Context menu click handler
 chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === "dyslexiaFriendly") {
+        chrome.tabs.sendMessage(tab.id, {
+            action: 'updateSettings',
+            settings: currentSettings
+        });
         chrome.scripting.executeScript({
             target: { tabId: tab.id },
             function: processTextForDyslexia,
@@ -150,50 +102,197 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
             action: 'simplifyText',
             text: info.selectionText
         });
+    } else if (info.menuItemId === "toggleExtension") {
+        toggleExtension(tab.id);
     }
 });
 
-// Message handler
+function toggleExtension(tabId) {
+    chrome.storage.sync.get('dyslexiaExtensionEnabled', (data) => {
+        const newState = !data.dyslexiaExtensionEnabled;
+        chrome.storage.sync.set({dyslexiaExtensionEnabled: newState});
+        
+        chrome.tabs.query({}, (tabs) => {
+            tabs.forEach(tab => {
+                try {
+                    chrome.tabs.sendMessage(tab.id, {
+                        action: 'toggleExtension',
+                        enabled: newState
+                    }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            console.warn(`Could not send message to tab ${tab.id}: ${chrome.runtime.lastError.message}`);
+                        }
+                    });
+                } catch (error) {
+                    console.error(`Error sending message to tab ${tab.id}:`, error);
+                }
+            });
+        });
+        
+        updateExtensionIcon(newState);
+    });
+}
+
+function getExtensionState(callback) {
+    chrome.storage.sync.get('dyslexiaExtensionEnabled', (data) => {
+        const isEnabled = data.dyslexiaExtensionEnabled !== undefined ? data.dyslexiaExtensionEnabled : true;
+        callback(isEnabled);
+    });
+}
+
+function updateExtensionIcon(isEnabled) {
+    // Set icon based on enabled/disabled state
+    if (isEnabled) {
+        chrome.action.setIcon({
+            path: {
+                "16": "icons/icon16.png",
+                "48": "icons/icon48.png",
+                "128": "icon.png"
+            }
+        });
+        chrome.action.setBadgeText({ text: "" });
+    } else {
+        // For disabled state, we'll use grayscale icon and an OFF badge
+        chrome.action.setIcon({
+            path: {
+                "16": "icons/icon16-disabled.png",
+                "48": "icons/icon48-disabled.png",
+                "128": "icon-disabled.png"
+            }
+        });
+        chrome.action.setBadgeText({ text: "OFF" });
+        chrome.action.setBadgeBackgroundColor({ color: "#888888" });
+    }
+}
+
+async function loadSettings() {
+    return new Promise((resolve) => {
+        chrome.storage.sync.get(['dyslexiaSettings', 'dyslexiaExtensionEnabled', 'apiKeys'], (data) => {
+            if (data.dyslexiaSettings) {
+                currentSettings = data.dyslexiaSettings;
+            } else {
+                chrome.storage.sync.set({dyslexiaSettings: currentSettings});
+            }
+            
+            if (data.dyslexiaExtensionEnabled !== undefined) {
+                extensionEnabled = data.dyslexiaExtensionEnabled;
+            } else {
+                chrome.storage.sync.set({dyslexiaExtensionEnabled: extensionEnabled});
+            }
+            
+            if (data.apiKeys) {
+                apiKeys = data.apiKeys;
+            }
+            
+            resolve();
+        });
+    });
+}
+
+async function checkLoginStatus() {
+    try {
+        const response = await fetch('http://localhost:3000/api/auth/status', {
+            method: 'GET',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.isLoggedIn && data.userId) {
+                currentSettings.userId = data.userId;
+                
+                await fetchUserSettings(data.userId);
+            }
+        }
+    } catch (error) {
+        console.error('Error checking login status:', error);
+    }
+}
+
+async function fetchUserSettings(userId) {
+    try {
+        const response = await fetch(`http://localhost:3000/api/settings/${userId}`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.settings) {
+                currentSettings = {...currentSettings, ...data.settings};
+                chrome.storage.sync.set({dyslexiaSettings: currentSettings});
+                
+                updateAllTabs();
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching user settings:', error);
+    }
+}
+
+function updateAllTabs() {
+    chrome.tabs.query({}, (tabs) => {
+        tabs.forEach(tab => {
+            try {
+                chrome.tabs.sendMessage(tab.id, {
+                    action: 'updateSettings',
+                    settings: currentSettings
+                }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        // This is normal for tabs that don't have the content script loaded
+                        // We can safely ignore this error
+                    }
+                });
+            } catch (error) {
+                console.error(`Error sending message to tab ${tab.id}:`, error);
+            }
+        });
+    });
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === 'toggleExtension') {
         extensionEnabled = message.enabled !== undefined ? message.enabled : !extensionEnabled;
         
-        // Save state to storage
-        chrome.storage.sync.set({extensionEnabled: extensionEnabled});
+        chrome.storage.sync.set({dyslexiaExtensionEnabled: extensionEnabled});
         
-        // Update all tabs
         chrome.tabs.query({}, (tabs) => {
-            tabs.forEach((tab) => {
-                chrome.tabs.sendMessage(tab.id, {
-                    action: 'toggleExtension',
-                    enabled: extensionEnabled
-                }).catch(() => {
-                    // Ignore errors for tabs that don't have content script
-                });
+            tabs.forEach(tab => {
+                try {
+                    chrome.tabs.sendMessage(tab.id, {
+                        action: 'toggleExtension',
+                        enabled: extensionEnabled
+                    });
+                } catch (error) {
+                    console.error(`Error sending message to tab ${tab.id}:`, error);
+                }
             });
         });
         
-        sendResponse({enabled: extensionEnabled});
+        updateExtensionIcon(extensionEnabled);
+        
+        if (sendResponse) {
+            sendResponse({enabled: extensionEnabled});
+        }
+        return true;
     } else if (message.action === 'getStatus') {
-        sendResponse({enabled: extensionEnabled, settings: currentSettings});
+        if (sendResponse) {
+            sendResponse({enabled: extensionEnabled, settings: currentSettings});
+        }
+        return true;
     } else if (message.action === 'updateSettings') {
-        // Update settings
         currentSettings = {...currentSettings, ...message.settings};
         
-        // Save to local storage
         chrome.storage.sync.set({dyslexiaSettings: currentSettings});
         
-        // If user is logged in, save to server
         if (currentSettings.userId) {
             saveSettingsToServer(currentSettings);
         }
         
-        // Update all tabs
         updateAllTabs();
         
         sendResponse({status: 'success'});
     } else if (message.action === 'readText') {
-        // Use chrome TTS API to read text
         chrome.tts.speak(message.text, {
             rate: 1.0,
             pitch: 1.0,
@@ -205,7 +304,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
         sendResponse({status: 'started'});
     } else if (message.action === 'simplifyText') {
-        // Process text using AI model
         processTextWithOpenAI(message.text, message.model || currentSettings.aiModel, message.level || currentSettings.simplificationLevel, "simplify")
             .then(simplifiedText => {
                 if (sender.tab) {
@@ -221,7 +319,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({error: error.message});
             });
     } else if (message.action === 'getPhoneticTranscription') {
-        // Process text using OpenAI to get phonetic transcription
         processTextWithOpenAI(message.text, 'gpt-3.5-turbo', 'medium', "phonetic")
             .then(phoneticText => {
                 sendResponse({phoneticText: phoneticText});
@@ -231,7 +328,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({error: error.message});
             });
     } else if (message.action === 'login') {
-        // Handle login
         loginUser(message.username, message.password)
             .then(response => {
                 sendResponse(response);
@@ -240,7 +336,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({error: error.message});
             });
     } else if (message.action === 'logout') {
-        // Handle logout
         logoutUser()
             .then(response => {
                 sendResponse(response);
@@ -249,7 +344,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({error: error.message});
             });
     } else if (message.action === 'register') {
-        // Handle registration
         registerUser(message.username, message.password, message.email)
             .then(response => {
                 sendResponse(response);
@@ -258,23 +352,48 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 sendResponse({error: error.message});
             });
     } else if (message.action === 'updateContextMenu') {
-        // Update context menu based on selection
-        if (message.hasSelection) {
-            chrome.contextMenus.update("dyslexiaFriendly", {visible: true});
-            chrome.contextMenus.update("readAloud", {visible: true});
-            chrome.contextMenus.update("simplifyText", {visible: true});
-        } else {
-            chrome.contextMenus.update("dyslexiaFriendly", {visible: false});
-            chrome.contextMenus.update("readAloud", {visible: false});
-            chrome.contextMenus.update("simplifyText", {visible: false});
+        try {
+            if (message.hasSelection) {
+                chrome.contextMenus.update("dyslexiaFriendly", {visible: true}, () => {
+                    if (chrome.runtime.lastError) {
+                        console.warn('Error updating dyslexiaFriendly menu:', chrome.runtime.lastError);
+                    }
+                });
+                chrome.contextMenus.update("readAloud", {visible: true}, () => {
+                    if (chrome.runtime.lastError) {
+                        console.warn('Error updating readAloud menu:', chrome.runtime.lastError);
+                    }
+                });
+                chrome.contextMenus.update("simplifyText", {visible: true}, () => {
+                    if (chrome.runtime.lastError) {
+                        console.warn('Error updating simplifyText menu:', chrome.runtime.lastError);
+                    }
+                });
+            } else {
+                chrome.contextMenus.update("dyslexiaFriendly", {visible: false}, () => {
+                    if (chrome.runtime.lastError) {
+                        console.warn('Error updating dyslexiaFriendly menu:', chrome.runtime.lastError);
+                    }
+                });
+                chrome.contextMenus.update("readAloud", {visible: false}, () => {
+                    if (chrome.runtime.lastError) {
+                        console.warn('Error updating readAloud menu:', chrome.runtime.lastError);
+                    }
+                });
+                chrome.contextMenus.update("simplifyText", {visible: false}, () => {
+                    if (chrome.runtime.lastError) {
+                        console.warn('Error updating simplifyText menu:', chrome.runtime.lastError);
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error updating context menus:', error);
         }
     }
     
-    // Required for async responses
     return true;
 });
 
-// Save settings to server
 async function saveSettingsToServer(settings) {
     if (!settings.userId) return;
     
@@ -292,7 +411,6 @@ async function saveSettingsToServer(settings) {
     }
 }
 
-// Process text for dyslexia
 async function processTextForDyslexia(selectedText, settings) {
     if (!selectedText) return;
     
@@ -302,15 +420,12 @@ async function processTextForDyslexia(selectedText, settings) {
             replaceHighlightedText(newText, settings.font);
         } catch (error) {
             console.error('Error processing text:', error);
-            // Fallback to original text with styling
             replaceHighlightedText(selectedText, settings.font);
         }
     } else {
-        // Just apply styling without rewriting
         replaceHighlightedText(selectedText, settings.font);
     }
     
-    // Define replaceHighlightedText function
     function replaceHighlightedText(newText, fontFamily) {
         const selection = window.getSelection();
         if (!selection.rangeCount) return;
@@ -331,12 +446,22 @@ async function processTextForDyslexia(selectedText, settings) {
     
     function getFontFamily(fontChoice) {
         switch (fontChoice) {
-            case 'open-dyslexic':
+            case 'opendyslexic':
                 return '"OpenDyslexic", sans-serif';
-            case 'comic-sans':
+            case 'comic':
                 return '"Comic Sans MS", cursive';
             case 'arial':
                 return 'Arial, sans-serif';
+            case 'verdana':
+                return 'Verdana, sans-serif';
+            case 'tahoma':
+                return 'Tahoma, sans-serif';
+            case 'trebuchet':
+                return 'Trebuchet MS, sans-serif';
+            case 'calibri':
+                return 'Calibri, sans-serif';
+            case 'century':
+                return 'Century Gothic, sans-serif';
             case 'sans-serif':
             default:
                 return 'sans-serif';
@@ -344,9 +469,7 @@ async function processTextForDyslexia(selectedText, settings) {
     }
 }
 
-// Process text with OpenAI models
 async function processTextWithOpenAI(text, model, level, purpose) {
-    // Get API key
     const apiKey = apiKeys.openai;
     if (!apiKey) {
         throw new Error('No OpenAI API key available. Please add your API key in the settings.');
@@ -354,7 +477,6 @@ async function processTextWithOpenAI(text, model, level, purpose) {
     
     let systemPrompt;
     
-    // Set purpose-specific instructions
     if (purpose === "rewrite") {
         switch (level) {
             case 'low':
@@ -380,10 +502,9 @@ async function processTextWithOpenAI(text, model, level, purpose) {
                 systemPrompt = "You are a helpful assistant that simplifies text for people with dyslexia. Replace complex words with simpler alternatives and break down difficult sentences into more readable ones.";
         }
     } else if (purpose === "phonetic") {
-        systemPrompt = "You are a helpful assistant that provides phonetic transcriptions of words. Break down the given words into syllables with hyphens. Format your response as a JSON object where each key is a word and its value is the syllable breakdown, for example: {\"example\": \"ex-am-ple\", \"syllable\": \"syl-la-ble\"}";
+        systemPrompt = "You are a helpful assistant specialized in syllable division for dyslexic readers. For each word in the text, split it into syllables using hyphens. Format your response as a JSON object where each key is a word and its value is the syllable breakdown. Example: {\"banana\": \"ba-na-na\", \"comprehension\": \"com-pre-hen-sion\"}. Follow rules for syllable division: (1) Divide between double consonants (hap-py), (2) Keep consonant blends and digraphs together (teach-er, not tea-cher), (3) Divide after short vowels followed by a consonant (lim-it), (4) Divide between roots and affixes (re-do, help-ful). Focus on clean, clear syllable divisions that will help pronunciation.";
     }
     
-    // Configure API call
     const endpoint = 'https://api.openai.com/v1/chat/completions';
     const headers = {
         'Content-Type': 'application/json',
@@ -420,13 +541,12 @@ async function processTextWithOpenAI(text, model, level, purpose) {
         const data = await response.json();
         const result = data.choices[0].message.content;
         
-        // If this is a phonetic request, parse the JSON response
         if (purpose === "phonetic") {
             try {
                 return JSON.parse(result);
             } catch (e) {
                 console.error('Error parsing phonetic JSON response:', e);
-                return result; // Return the raw text if JSON parsing fails
+                return result;
             }
         }
         
@@ -437,7 +557,6 @@ async function processTextWithOpenAI(text, model, level, purpose) {
     }
 }
 
-// User authentication functions
 async function loginUser(username, password) {
     try {
         const response = await fetch('http://localhost:3000/api/auth/login', {
@@ -449,24 +568,20 @@ async function loginUser(username, password) {
             body: JSON.stringify({username, password})
         });
         
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Login failed');
+        if (response.ok) {
+            const data = await response.json();
+            
+            currentSettings.userId = data.userId;
+            chrome.storage.sync.set({dyslexiaSettings: currentSettings});
+            
+            await fetchUserSettings(data.userId);
+            
+            return {success: true, userId: data.userId};
         }
+    } catch (serverError) {
+        console.warn('Server authentication unavailable:', serverError);
         
-        const data = await response.json();
-        
-        // Update user ID in settings
-        currentSettings.userId = data.userId;
-        chrome.storage.sync.set({dyslexiaSettings: currentSettings});
-        
-        // Fetch user settings
-        await fetchUserSettings(data.userId);
-        
-        return {success: true, userId: data.userId};
-    } catch (error) {
-        console.error('Login error:', error);
-        return {success: false, error: error.message};
+        return await localLogin(username, password);
     }
 }
 
@@ -476,16 +591,16 @@ async function logoutUser() {
             method: 'POST',
             credentials: 'include'
         });
-        
-        // Clear user ID from settings
-        currentSettings.userId = null;
-        chrome.storage.sync.set({dyslexiaSettings: currentSettings});
-        
-        return {success: true};
-    } catch (error) {
-        console.error('Logout error:', error);
-        return {success: false, error: error.message};
+    } catch (serverError) {
+        console.warn('Server logout unavailable:', serverError);
     }
+    
+    currentSettings.userId = null;
+    chrome.storage.sync.set({dyslexiaSettings: currentSettings});
+    
+    chrome.storage.local.remove('localAuthData');
+    
+    return {success: true};
 }
 
 async function registerUser(username, password, email) {
@@ -498,15 +613,58 @@ async function registerUser(username, password, email) {
             body: JSON.stringify({username, password, email})
         });
         
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || 'Registration failed');
+        if (response.ok) {
+            const data = await response.json();
+            return {success: true, userId: data.userId};
         }
+    } catch (serverError) {
+        console.warn('Server registration unavailable:', serverError);
         
-        const data = await response.json();
-        return {success: true, userId: data.userId};
-    } catch (error) {
-        console.error('Registration error:', error);
-        return {success: false, error: error.message};
+        return await localRegister(username, password, email);
     }
+}
+
+async function localLogin(username, password) {
+    return new Promise((resolve) => {
+        chrome.storage.local.get('localAuthData', (data) => {
+            const users = data.localAuthData || [];
+            const user = users.find(u => u.username === username);
+            
+            if (user && user.password === password) {
+                currentSettings.userId = user.userId;
+                chrome.storage.sync.set({dyslexiaSettings: currentSettings});
+                
+                resolve({success: true, userId: user.userId, message: 'Logged in locally (server unavailable)'});
+            } else {
+                resolve({success: false, error: 'Invalid username or password'});
+            }
+        });
+    });
+}
+
+async function localRegister(username, password, email) {
+    return new Promise((resolve) => {
+        chrome.storage.local.get('localAuthData', (data) => {
+            const users = data.localAuthData || [];
+            
+            if (users.some(u => u.username === username)) {
+                resolve({success: false, error: 'Username already exists'});
+                return;
+            }
+            
+            const userId = 'local_' + Date.now().toString();
+            const newUser = {
+                userId,
+                username,
+                password,
+                email,
+                createdAt: new Date().toISOString()
+            };
+            
+            users.push(newUser);
+            chrome.storage.local.set({localAuthData: users}, () => {
+                resolve({success: true, userId, message: 'Registered locally (server unavailable)'});
+            });
+        });
+    });
 }

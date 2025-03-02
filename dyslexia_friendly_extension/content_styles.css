@@ -1,0 +1,442 @@
+/* Professional UI styles for ReadEase extension */
+
+/* Design tokens - unified color system */
+:root {
+  --readease-primary: #3B82F6;
+  --readease-primary-light: #93C5FD;
+  --readease-primary-dark: #1D4ED8;
+  --readease-accent: #F59E0B;
+  --readease-success: #10B981;
+  --readease-error: #EF4444;
+  --readease-surface: #F9FAFB;
+  --readease-surface-hover: #F3F4F6;
+  --readease-text-primary: #1F2937;
+  --readease-text-secondary: #6B7280;
+  --readease-text-disabled: #9CA3AF;
+  --readease-border: #E5E7EB;
+  --readease-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --readease-shadow-md: 0 4px 6px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.05);
+  --readease-shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --readease-radius-sm: 4px;
+  --readease-radius-md: 6px;
+  --readease-radius-lg: 8px;
+  --readease-transition: all 0.2s ease;
+  --readease-z-content: 10;
+  --readease-z-overlay: 1000;
+  --readease-z-popup: 2000;
+  --readease-z-tooltip: 3000;
+}
+
+/* Base styles for all ReadEase elements */
+.readease-element {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  box-sizing: border-box;
+  line-height: 1.5;
+}
+
+/* Animation keyframes */
+@keyframes readease-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes readease-slide-up {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes readease-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* Selection highlight container */
+.readease-highlight-container {
+  display: inline-block;
+  position: relative; 
+  z-index: var(--readease-z-content);
+  animation: readease-fade-in 0.2s ease-out;
+  transition: var(--readease-transition);
+  border-radius: 3px;
+  padding: 0;
+  margin: 0;
+}
+
+.readease-highlight-text {
+  display: inline-block;
+  position: relative;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background-color: var(--readease-surface);
+  transition: var(--readease-transition);
+  font-family: inherit;
+  text-align: left;
+}
+
+.readease-highlight-container:hover {
+  cursor: pointer;
+}
+
+/* Processing container styles - indicates text being processed but maintains format */
+.readease-processing-container {
+  display: inline;
+  position: relative;
+  border-bottom: 1px dotted var(--readease-primary-light);
+}
+
+.readease-loading-inline {
+  opacity: 0.7;
+  position: relative;
+}
+
+.readease-loading-inline::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(to right, var(--readease-primary), var(--readease-accent), var(--readease-primary));
+  background-size: 200% 100%;
+  animation: readease-loading-pulse 1.5s infinite linear;
+}
+
+@keyframes readease-loading-pulse {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+/* Floating toolbar buttons */
+.readease-toolbar-btn {
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: var(--readease-text-secondary);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: var(--readease-transition);
+}
+
+.readease-toolbar-btn:hover {
+  background-color: var(--readease-surface-hover);
+  color: var(--readease-primary);
+}
+
+.readease-highlight-background {
+  position: absolute;
+  border-radius: var(--readease-radius-md);
+  background-color: var(--readease-surface);
+  transition: var(--readease-transition);
+}
+
+.readease-highlight-text {
+  position: relative;
+  padding: 12px 14px;
+  color: var(--readease-text-primary);
+  margin-right: 30px;
+  user-select: none;
+  font-weight: 400;
+}
+
+/* Toolbar with action buttons */
+.readease-actions {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--readease-border);
+  padding: 8px 10px;
+  border-radius: 0 0 var(--readease-radius-md) var(--readease-radius-md);
+  box-shadow: var(--readease-shadow-sm);
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--readease-z-content);
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.readease-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background-color: transparent;
+  color: var(--readease-text-secondary);
+  border-radius: var(--readease-radius-sm);
+  padding: 6px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--readease-transition);
+  outline: none;
+}
+
+.readease-action-btn:hover {
+  background-color: var(--readease-surface-hover);
+  color: var(--readease-primary);
+}
+
+.readease-action-btn:focus {
+  box-shadow: 0 0 0 2px var(--readease-primary-light);
+}
+
+/* Control buttons */
+.readease-highlight-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--readease-text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--readease-transition);
+  z-index: 5;
+  opacity: 0.7;
+}
+
+.readease-highlight-close:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  opacity: 1;
+  color: var(--readease-error);
+}
+
+/* Syllables breakdown container */
+.readease-syllables-container {
+  background-color: var(--readease-surface);
+  border-radius: var(--readease-radius-md);
+  box-shadow: var(--readease-shadow-lg);
+  padding: 16px;
+  margin-top: 8px;
+  animation: readease-slide-up 0.3s ease-out;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--readease-border);
+}
+
+.readease-syllable-word {
+  background-color: white;
+  border-radius: var(--readease-radius-sm);
+  padding: 8px 12px;
+  box-shadow: var(--readease-shadow-sm);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 4px;
+  border: 1px solid var(--readease-border);
+  transition: var(--readease-transition);
+}
+
+.readease-syllable-word:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--readease-shadow-md);
+}
+
+.readease-syllable-text {
+  color: var(--readease-primary);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.readease-original-word {
+  color: var(--readease-text-secondary);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Processed text container */
+.dyslexia-processed-text {
+  background-color: var(--readease-surface);
+  border-radius: var(--readease-radius-lg);
+  box-shadow: var(--readease-shadow-lg);
+  padding: 20px;
+  margin: 16px 0;
+  border: 1px solid var(--readease-border);
+  max-width: 800px;
+  position: relative;
+  animation: readease-slide-up 0.3s ease-out;
+}
+
+.dyslexia-processed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--readease-border);
+}
+
+.dyslexia-processed-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--readease-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dyslexia-processed-title svg {
+  width: 18px;
+  height: 18px;
+  color: var(--readease-primary);
+}
+
+.dyslexia-processed-content {
+  margin-top: 12px;
+  color: var(--readease-text-primary);
+}
+
+/* Loading indicators */
+.readease-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  color: var(--readease-text-secondary);
+  font-style: italic;
+}
+
+.readease-loading::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  border: 2px solid var(--readease-primary-light);
+  border-top-color: var(--readease-primary);
+  border-radius: 50%;
+  animation: readease-spin 1s linear infinite;
+}
+
+@keyframes readease-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Buttons */
+.readease-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--readease-primary);
+  color: white;
+  border: none;
+  border-radius: var(--readease-radius-sm);
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--readease-transition);
+  outline: none;
+  gap: 6px;
+}
+
+.readease-btn:hover {
+  background-color: var(--readease-primary-dark);
+}
+
+.readease-btn-secondary {
+  background-color: transparent;
+  color: var(--readease-primary);
+  border: 1px solid var(--readease-primary);
+}
+
+.readease-btn-secondary:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Tooltip */
+.readease-tooltip {
+  position: relative;
+}
+
+.readease-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: var(--readease-radius-sm);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: var(--readease-transition);
+  z-index: var(--readease-z-tooltip);
+}
+
+.readease-tooltip:hover::after {
+  opacity: 1;
+  bottom: calc(100% + 5px);
+}
+
+/* Legacy elements - for backward compatibility */
+#dyslexia-selection-overlay {
+  position: absolute;
+  z-index: -1;
+  border-radius: var(--readease-radius-md);
+  pointer-events: none;
+}
+
+.dyslexia-processed {
+  display: inline-block;
+  margin: 5px 0;
+}
+
+.phonetic-transcription {
+  font-size: 90%;
+  color: var(--readease-text-secondary);
+  margin-top: 5px;
+  font-style: italic;
+}
+
+.word-container {
+  position: relative;
+  display: inline-block;
+  margin-right: 5px;
+}
+
+.word {
+  display: inline-block;
+}
+
+.phonetic {
+  position: absolute;
+  top: -18px;
+  left: 0;
+  font-size: 0.8em;
+  color: var(--readease-text-secondary);
+}
+
+/* Browser toggle button */
+.browser-toggle {
+  position: fixed;
+  top: 0;
+  right: 20px;
+  z-index: var(--readease-z-popup);
+  background: var(--readease-primary);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 0 0 var(--readease-radius-md) var(--readease-radius-md);
+  box-shadow: var(--readease-shadow-md);
+  display: flex;
+  align-items: center;
+}
+
+.browser-toggle .toggle-label {
+  margin-right: 8px;
+  font-weight: 500;
+  font-size: 12px;
+}

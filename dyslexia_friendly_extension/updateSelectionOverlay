@@ -1,0 +1,23 @@
+function updateSelectionOverlay() {
+    // Guard clauses to prevent errors
+    if (!selectionOverlay) return;
+    
+    try {
+        // Find the text element
+        const text = selectionOverlay.querySelector('.readease-highlight-text');
+        
+        if (text) {
+            text.style.fontFamily = getFontFamily(currentSettings.font || 'sans-serif');
+            text.style.fontSize = `${currentSettings.fontSize || 16}px`;
+            text.style.letterSpacing = `${currentSettings.letterSpacing || 0.12}em`;
+            text.style.wordSpacing = `${currentSettings.wordSpacing || 0.16}em`;
+            text.style.lineHeight = `${currentSettings.lineSpacing || 1.5}`;
+            text.style.color = currentSettings.textColor || '#000000';
+        }
+        
+        // Update background color
+        selectionOverlay.style.backgroundColor = currentSettings.backgroundColor || '#f8f8f8';
+    } catch (error) {
+        console.error('Error updating selection overlay:', error);
+    }
+}

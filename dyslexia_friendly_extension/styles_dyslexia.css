@@ -21,6 +21,27 @@
     font-style: normal;
 }
 
+@font-face {
+    font-family: 'Lexie Readable';
+    src: url('fonts/lexie-readable-regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'FS Me';
+    src: url('fonts/FSMe-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Sylexiad Sans';
+    src: url('fonts/SylexiadSans-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -171,14 +192,19 @@ input:checked + .slider.small:before {
 /* Tab content */
 .tab-content {
     padding: 15px;
+    position: relative;
+    min-height: 300px;
 }
 
 .tab-pane {
-    display: none;
+    display: none !important;
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
 .tab-pane.active {
-    display: block;
+    display: block !important;
+    opacity: 1;
 }
 
 /* Feature items */
@@ -251,7 +277,7 @@ input:checked + .slider.small:before {
 .setting-item input[type="color"] {
     padding: 0;
     width: 40px;
-    height:.25px;
+    height: 25px;
 }
 
 /* Buttons */

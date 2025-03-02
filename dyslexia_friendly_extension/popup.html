@@ -5,11 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dyslexia Text Reader</title>
     <link rel="stylesheet" href="styles_dyslexia.css">
+    <link rel="stylesheet" href="popup_styles.css">
+    <link rel="stylesheet" href="google_fonts.css">
+    <style>
+        /* Critical tab styles to ensure they work */
+        .tab-pane {
+            display: none !important;
+            opacity: 1 !important;
+        }
+        .tab-pane.active {
+            display: block !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        /* Fix for inconsistent font rendering */
+        #font-preview {
+            min-height: 50px;
+        }
+        
+        /* Font preloading for proper preview */
+        @font-face {
+            font-family: 'OpenDyslexic';
+            src: url('fonts/OpenDyslexic-Regular.otf') format('opentype');
+            font-weight: normal;
+            font-style: normal;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Dyslexia Text Reader</h1>
+            <h1>ReadEase</h1>
             <div class="main-toggle">
                 <label class="switch">
                     <input type="checkbox" id="extension-toggle">
@@ -47,7 +73,7 @@
                             <span class="slider round small"></span>
                         </label>
                     </div>
-                    <p>Read selected text aloud. Select text and press Ctrl+Shift+R.</p>
+                    <p>Read selected text aloud. Select text and press Ctrl+Shift+L.</p>
                 </div>
 
                 <div class="feature-item">
@@ -72,6 +98,7 @@
                     </div>
                     <p>Display phonetic transcriptions for words.</p>
                 </div>
+
             </div>
 
             <!-- Settings tab -->
@@ -85,7 +112,19 @@
                             <option value="sans-serif" selected>Sans Serif</option>
                             <option value="comic-sans">Comic Sans</option>
                             <option value="open-dyslexic">OpenDyslexic</option>
+                            <option value="verdana">Verdana</option>
+                            <option value="tahoma">Tahoma</option>
+                            <option value="trebuchet">Trebuchet MS</option>
+                            <option value="calibri">Calibri</option>
+                            <option value="century-gothic">Century Gothic</option>
                         </select>
+                    </div>
+                    
+                    <div class="font-preview-container">
+                        <div class="font-preview-title">Font Preview:</div>
+                        <div id="font-preview" class="font-preview">
+                            <p class="font-preview-text">Here to help make reading Dyslexia-Friendly!</p>
+                        </div>
                     </div>
 
                     <div class="setting-item">
@@ -154,6 +193,12 @@
             <div id="account" class="tab-pane">
                 <div id="login-form" class="auth-form">
                     <h3>Login</h3>
+                    <p id="login-message" class="message"></p>
+                    <p id="login-error" class="message error" style="display:none;"></p>
+                    <p id="server-status" class="message info small">
+                        <span id="server-connected" style="display:none;">Server connected</span>
+                        <span id="server-disconnected" style="display:none;">Server disconnected - using local storage</span>
+                    </p>
                     <div class="form-group">
                         <label for="login-username">Username</label>
                         <input type="text" id="login-username" placeholder="Enter your username">
@@ -166,7 +211,6 @@
                         <button id="login-btn" class="primary-btn">Login</button>
                         <a href="#" id="show-register">Create an account</a>
                     </div>
-                    <div id="login-message" class="message"></div>
                 </div>
 
                 <div id="register-form" class="auth-form" style="display: none;">
@@ -183,10 +227,15 @@
                         <label for="register-password">Password</label>
                         <input type="password" id="register-password" placeholder="Choose a password">
                     </div>
+                    <div class="form-group">
+                        <label for="register-confirm-password">Confirm Password</label>
+                        <input type="password" id="register-confirm-password" placeholder="Confirm your password">
+                    </div>
                     <div class="form-actions">
                         <button id="register-btn" class="primary-btn">Register</button>
                         <a href="#" id="show-login">Back to login</a>
                     </div>
+                    <p id="register-error" class="message error" style="display:none;"></p>
                     <div id="register-message" class="message"></div>
                 </div>
 
