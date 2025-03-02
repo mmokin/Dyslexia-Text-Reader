@@ -890,11 +890,9 @@ function showToast(message, type = 'error') {
     toast.textContent = message;
     document.body.appendChild(toast);
     
-    // Animate in
     setTimeout(() => {
         toast.classList.add('show');
         
-        // Auto-remove after delay
         setTimeout(() => {
             toast.classList.remove('show');
             setTimeout(() => toast.remove(), 300);
@@ -902,14 +900,11 @@ function showToast(message, type = 'error') {
     }, 10);
 }
 
-// Process text for simplification
 function processTextSelection(text) {
     if (!text || !currentSettings.rewriteEnabled) return;
     
-    // Create loading container
     const loadingContainer = createProcessedTextBox(text, 'Simplifying text...', 'loading');
     
-    // Request text simplification from the background script
     chrome.runtime.sendMessage({
         action: 'simplifyText',
         text: text,
@@ -922,11 +917,9 @@ function processTextSelection(text) {
             return;
         }
         
-        // Remove loading container
         loadingContainer.remove();
         
         if (response && response.simplifiedText) {
-            // Create new container with simplified text
             createProcessedTextBox(text, response.simplifiedText, 'simplified');
         } else {
             showToast('Could not simplify text. Please try again.');
@@ -934,11 +927,9 @@ function processTextSelection(text) {
     });
 }
 
-// Process text for phonetic/syllable breakdown
 function handlePhoneticTranscription(text) {
     if (!text || !currentSettings.phoneticsEnabled) return;
     
-    // Create loading container
     const loadingContainer = createProcessedTextBox(text, 'Analyzing syllables...', 'loading');
     
     chrome.runtime.sendMessage({
@@ -952,11 +943,9 @@ function handlePhoneticTranscription(text) {
             return;
         }
         
-        // Remove loading container
         loadingContainer.remove();
         
         if (response && response.phoneticText) {
-            // Create new container with phonetic breakdown
             createProcessedTextBox(text, response.phoneticText, 'phonetic');
         } else {
             showToast('Could not analyze syllables. Please try again.');
@@ -964,11 +953,9 @@ function handlePhoneticTranscription(text) {
     });
 }
 
-// Legacy function for backward compatibility
 function addPhoneticTranscription(element, text) {
     if (!text || !currentSettings.phoneticsEnabled) return;
     
-    // Show loading indicator for syllables
     const loadingIndicator = document.createElement('div');
     loadingIndicator.classList.add('syllable-loading');
     loadingIndicator.textContent = 'Loading syllable breakdown...';
@@ -989,11 +976,9 @@ function addPhoneticTranscription(element, text) {
             return;
         }
         
-        // Remove the loading indicator
         loadingIndicator.remove();
         
         if (response && response.phoneticText) {
-            // Create a styled container for syllables
             const syllablesContainer = document.createElement('div');
             syllablesContainer.classList.add('syllables-breakdown');
             syllablesContainer.style.marginTop = '15px';
@@ -1014,12 +999,9 @@ function addPhoneticTranscription(element, text) {
             syllablesContent.style.flexWrap = 'wrap';
             syllablesContent.style.gap = '12px';
             
-            // Process the phonetic text response
             if (typeof response.phoneticText === 'string') {
-                // Simple fallback if string is returned instead of JSON
                 syllablesContent.textContent = response.phoneticText;
             } else if (typeof response.phoneticText === 'object') {
-                // Process each word/syllable pair
                 for (const [word, syllables] of Object.entries(response.phoneticText)) {
                     const wordContainer = document.createElement('div');
                     wordContainer.className = 'syllable-word';
@@ -1031,7 +1013,6 @@ function addPhoneticTranscription(element, text) {
                     wordContainer.style.borderRadius = '4px';
                     wordContainer.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
                     
-                    // The syllable breakdown
                     const syllableText = document.createElement('div');
                     syllableText.className = 'syllable-text';
                     syllableText.textContent = syllables;
@@ -1039,7 +1020,6 @@ function addPhoneticTranscription(element, text) {
                     syllableText.style.fontWeight = 'bold';
                     syllableText.style.fontSize = '14px';
                     
-                    // The original word (smaller, below)
                     const originalWord = document.createElement('div');
                     originalWord.className = 'original-word';
                     originalWord.textContent = word;
@@ -1056,7 +1036,6 @@ function addPhoneticTranscription(element, text) {
             syllablesContainer.appendChild(syllablesContent);
             element.appendChild(syllablesContainer);
             
-            // Add a speak button for the syllables
             const speakSyllablesBtn = document.createElement('button');
             speakSyllablesBtn.textContent = '🔊 Speak Syllables';
             speakSyllablesBtn.style.display = 'block';
@@ -1069,7 +1048,6 @@ function addPhoneticTranscription(element, text) {
             speakSyllablesBtn.style.cursor = 'pointer';
             speakSyllablesBtn.style.fontSize = '14px';
             
-            // Create syllable speech text
             let syllableSpeechText = '';
             if (typeof response.phoneticText === 'object') {
                 // Format for speech: "banana: ba-na-na, apple: ap-ple"
@@ -1087,17 +1065,13 @@ function addPhoneticTranscription(element, text) {
     });
 }
 
-// Helper function to revert a single element back to its original state
 function revertElement(item) {
     try {
         if (item.element && item.element.parentNode) {
-            // Create a text node with the original content
             const textNode = document.createTextNode(item.originalContent);
             
-            // Replace the modified element with the original text
             item.element.parentNode.replaceChild(textNode, item.element);
             
-            // Remove the toolbar if it exists
             if (item.element.dataset && item.element.dataset.toolbarId) {
                 const toolbar = document.getElementById(item.element.dataset.toolbarId);
                 if (toolbar && toolbar.parentNode) {
@@ -1105,7 +1079,6 @@ function revertElement(item) {
                 }
             }
             
-            // Remove this item from the tracking array
             const index = modifiedElements.findIndex(mod => mod.element === item.element);
             if (index !== -1) {
                 modifiedElements.splice(index, 1);
@@ -1117,7 +1090,6 @@ function revertElement(item) {
 }
 
 function revertModifiedElements() {
-    // Create a copy of the array since we'll be modifying it during iteration
     const elementsToRevert = [...modifiedElements];
     
     elementsToRevert.forEach(item => {
@@ -1126,7 +1098,6 @@ function revertModifiedElements() {
                 const textNode = document.createTextNode(item.originalContent);
                 item.element.parentNode.replaceChild(textNode, item.element);
                 
-                // Remove any associated toolbars
                 if (item.element.dataset && item.element.dataset.toolbarId) {
                     const toolbar = document.getElementById(item.element.dataset.toolbarId);
                     if (toolbar && toolbar.parentNode) {
