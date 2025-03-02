@@ -4,6 +4,8 @@ let selectionOverlay = null;
 let isWikipedia = window.location.hostname.includes('wikipedia.org');
 let modifiedElements = [];
 let domReady = false;
+let previousSelection = '';
+let selectionConfirmDialog = null;
 
 // Function to check if DOM is fully loaded
 function isDOMReady() {
@@ -62,11 +64,41 @@ function waitForDOM() {
                     }
                     
                     sendResponse({status: 'success'});
+                } else if (message.action === 'applyDyslexiaStyles') {
+                    // Handle right-click "Make Dyslexia Friendly" option
+                    if (!extensionEnabled) {
+                        sendResponse({status: 'error', error: 'Extension is disabled'});
+                        return true;
+                    }
+                    
+                    // Create a mock selection object with the text
+                    const mockSelection = {
+                        toString: () => message.text,
+                        isCollapsed: false,
+                        rangeCount: 1,
+                        getRangeAt: (i) => {
+                            // Use the actual selection if available
+                            const realSelection = window.getSelection();
+                            if (realSelection && realSelection.rangeCount > 0) {
+                                return realSelection.getRangeAt(0);
+                            }
+                            
+                            // Create a mock range as fallback
+                            return document.createRange();
+                        }
+                    };
+                    
+                    // Directly apply styles without showing confirmation dialog
+                    applyDyslexiaStylesToSelection(mockSelection);
+                    sendResponse({status: 'success'});
                 } else if (message.action === 'readAloud') {
                     readTextAloud(message.text);
                     sendResponse({status: 'success'});
                 } else if (message.action === 'processText') {
                     processTextSelection(message.text);
+                    sendResponse({status: 'success'});
+                } else if (message.action === 'phoneticBreakdown') {
+                    handlePhoneticTranscription(message.text);
                     sendResponse({status: 'success'});
                 }
             } catch (error) {
@@ -148,15 +180,33 @@ function handleTextSelection(event) {
     if (!extensionEnabled) return;
     
     const selection = window.getSelection();
-    if (!selection || selection.isCollapsed || selection.toString().trim() === '') {
-        return;
+    const selectedText = selection ? selection.toString().trim() : '';
+    
+    // If text is selected, store it (but don't apply any styles or show confirmation)
+    // The user will need to use the right-click context menu to apply styles
+    if (selection && !selection.isCollapsed && selectedText) {
+        previousSelection = selectedText;
+        
+        // Update context menu availability via the background script
+        chrome.runtime.sendMessage({
+            action: 'updateContextMenu',
+            hasSelection: true
+        });
+    } else if (event && event.type === 'mouseup') {
+        // When mouse is released without text, update menu state
+        chrome.runtime.sendMessage({
+            action: 'updateContextMenu',
+            hasSelection: false
+        });
     }
-    
-    // Apply the selected text styling only - not processing text yet
-    applyDyslexiaStylesToSelection(selection);
-    
-    // Only process text with additional features if they're enabled
-    // This happens when the user clicks the selection or through context menu
+}
+
+// Create confirmation dialog after text selection
+// No longer showing confirmation dialog - now only using context menu for direct actions
+function showSelectionConfirmationDialog(text, selection) {
+    // This function is kept for backwards compatibility
+    // but no longer shows the confirmation dialog
+    return;
 }
 
 function handleKeyboardShortcuts(event) {
@@ -685,68 +735,204 @@ function readTextAloud(text) {
     }
 }
 
+function createProcessedTextBox(text, processedText, processType) {
+    const container = document.createElement('div');
+    container.className = 'dyslexia-processed-text readease-element';
+    
+    const header = document.createElement('div');
+    header.className = 'dyslexia-processed-header';
+    
+    const title = document.createElement('div');
+    title.className = 'dyslexia-processed-title';
+    
+    let titleText = 'Original Text';
+    let icon = '';
+    
+    if (processType === 'simplified') {
+        titleText = 'Simplified Text';
+        icon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+        </svg>`;
+    } else if (processType === 'phonetic') {
+        titleText = 'Phonetic Breakdown';
+        icon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>`;
+    } else if (processType === 'loading') {
+        titleText = 'Processing...';
+        icon = `<div class="readease-spinner"></div>`;
+    }
+    
+    title.innerHTML = `${icon} <span>${titleText}</span>`;
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'readease-highlight-close';
+    closeBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>`;
+    
+    closeBtn.addEventListener('click', () => container.remove());
+    
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+    container.appendChild(header);
+    
+    // Main content area
+    const content = document.createElement('div');
+    content.className = 'dyslexia-processed-content';
+    
+    // Apply user's dyslexia settings
+    content.style.fontFamily = getFontFamily(currentSettings.font || 'sans-serif');
+    content.style.fontSize = `${currentSettings.fontSize || 16}px`;
+    content.style.letterSpacing = `${currentSettings.letterSpacing || 0.12}em`;
+    content.style.wordSpacing = `${currentSettings.wordSpacing || 0.16}em`;
+    content.style.lineHeight = `${currentSettings.lineSpacing || 1.5}`;
+    content.style.color = currentSettings.textColor || '#000000';
+    
+    if (processType === 'loading') {
+        const loadingText = document.createElement('div');
+        loadingText.className = 'readease-loading';
+        loadingText.textContent = processedText || 'Processing content...';
+        content.appendChild(loadingText);
+    } else if (processType === 'simplified') {
+        content.textContent = processedText;
+    } else if (processType === 'phonetic') {
+        // Handle phonetic display differently based on format
+        if (typeof processedText === 'object') {
+            const syllablesContent = document.createElement('div');
+            syllablesContent.style.display = 'flex';
+            syllablesContent.style.flexWrap = 'wrap';
+            syllablesContent.style.gap = '8px';
+            
+            for (const [word, syllables] of Object.entries(processedText)) {
+                const wordElem = document.createElement('div');
+                wordElem.className = 'readease-syllable-word';
+                
+                const syllableElem = document.createElement('div');
+                syllableElem.className = 'readease-syllable-text';
+                syllableElem.textContent = syllables;
+                
+                const originalElem = document.createElement('div');
+                originalElem.className = 'readease-original-word';
+                originalElem.textContent = word;
+                
+                wordElem.appendChild(syllableElem);
+                wordElem.appendChild(originalElem);
+                syllablesContent.appendChild(wordElem);
+            }
+            
+            content.appendChild(syllablesContent);
+        } else {
+            content.textContent = processedText;
+        }
+    }
+    
+    container.appendChild(content);
+    
+    // Add action buttons for non-loading states
+    if (processType !== 'loading') {
+        const actions = document.createElement('div');
+        actions.className = 'readease-actions';
+        
+        // Read aloud button if enabled
+        if (currentSettings.textToSpeechEnabled) {
+            const readBtn = document.createElement('button');
+            readBtn.className = 'readease-btn';
+            readBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+                Read Aloud
+            `;
+            readBtn.addEventListener('click', () => {
+                if (processType === 'phonetic' && typeof processedText === 'object') {
+                    // Format for speech
+                    const syllableSpeechText = Object.entries(processedText)
+                        .map(([word, syllables]) => `${word}: ${syllables.replace(/-/g, ', ')}`)
+                        .join('. ');
+                    readTextAloud(syllableSpeechText);
+                } else {
+                    readTextAloud(processedText);
+                }
+            });
+            actions.appendChild(readBtn);
+        }
+        
+        container.appendChild(actions);
+    }
+    
+    // Add to document
+    document.body.appendChild(container);
+    
+    // Position near current selection or center of viewport
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount) {
+        const rect = selection.getRangeAt(0).getBoundingClientRect();
+        container.style.position = 'absolute';
+        container.style.top = `${window.scrollY + rect.bottom + 10}px`;
+        container.style.left = `${window.scrollX + rect.left}px`;
+    } else {
+        container.style.position = 'fixed';
+        container.style.top = '20%';
+        container.style.left = '50%';
+        container.style.transform = 'translateX(-50%)';
+    }
+    
+    // Make container draggable by header
+    header.style.cursor = 'move';
+    let isDragging = false;
+    let offsetX, offsetY;
+    
+    header.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        offsetX = e.clientX - container.getBoundingClientRect().left;
+        offsetY = e.clientY - container.getBoundingClientRect().top;
+        container.style.cursor = 'grabbing';
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        container.style.left = `${e.clientX - offsetX}px`;
+        container.style.top = `${e.clientY - offsetY}px`;
+    });
+    
+    document.addEventListener('mouseup', () => {
+        isDragging = false;
+        container.style.cursor = 'auto';
+    });
+    
+    return container;
+}
+
+// Toast notification for errors/messages
+function showToast(message, type = 'error') {
+    const toast = document.createElement('div');
+    toast.className = `readease-toast readease-toast-${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => {
+        toast.classList.add('show');
+        
+        // Auto-remove after delay
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }, 10);
+}
+
+// Process text for simplification
 function processTextSelection(text) {
     if (!text || !currentSettings.rewriteEnabled) return;
     
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed) {
-        console.warn('No valid selection for processing');
-        return;
-    }
-    
-    const range = selection.getRangeAt(0);
-    const startNode = range.startContainer;
-    
-    // Find the parent element of the selection
-    let parentElement = startNode.nodeType === Node.TEXT_NODE ? 
-        startNode.parentElement : startNode;
-        
-    // Get the original selection's full DOM context
-    const highlightRange = range.cloneRange();
-    
-    // Get computed styles from the parent element
-    const computedStyle = window.getComputedStyle(parentElement);
-    
-    // Create container to show while processing
-    const processingContainer = document.createElement('span');
-    processingContainer.className = 'readease-processing-container';
-    
-    // Capture all original styling to perfectly replicate the text appearance
-    const styleProps = [
-        'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'textDecoration',
-        'color', 'letterSpacing', 'wordSpacing', 'lineHeight', 'textAlign',
-        'textTransform', 'backgroundColor', 'verticalAlign', 'display',
-        'marginTop', 'marginBottom', 'marginLeft', 'marginRight',
-        'paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight'
-    ];
-    
-    // Apply all captured styles
-    styleProps.forEach(prop => {
-        processingContainer.style[prop] = computedStyle[prop];
-    });
-    
-    // Add a subtle loading effect but keep the text in place
-    processingContainer.innerHTML = `<span class="readease-loading-inline">${text}</span>`;
-    
-    // Delete the contents of the original range
-    highlightRange.deleteContents();
-    
-    // Insert our temporary processing container
-    highlightRange.insertNode(processingContainer);
-    
-    // Track this element for later update and potential reversion
-    const originalElement = {
-        element: processingContainer,
-        originalContent: text,
-        originalStyles: {}
-    };
-    
-    // Save original style properties for potential reversion
-    styleProps.forEach(prop => {
-        originalElement.originalStyles[prop] = computedStyle[prop];
-    });
-    
-    modifiedElements.push(originalElement);
+    // Create loading container
+    const loadingContainer = createProcessedTextBox(text, 'Simplifying text...', 'loading');
     
     // Request text simplification from the background script
     chrome.runtime.sendMessage({
@@ -756,100 +942,54 @@ function processTextSelection(text) {
     }, (response) => {
         if (chrome.runtime.lastError) {
             console.error('Error simplifying text:', chrome.runtime.lastError);
-            // Revert to original text if there's an error
-            revertElement(originalElement);
+            loadingContainer.remove();
+            showToast('Error simplifying text. Please try again.');
             return;
         }
         
+        // Remove loading container
+        loadingContainer.remove();
+        
         if (response && response.simplifiedText) {
-            // Create a floating toolbar for this processed text
-            const toolbarId = 'readease-toolbar-' + Date.now();
-            const toolbar = document.createElement('div');
-            toolbar.id = toolbarId;
-            toolbar.className = 'readease-floating-toolbar';
-            toolbar.style.position = 'absolute';
-            toolbar.style.zIndex = '1000';
-            toolbar.style.display = 'flex';
-            toolbar.style.alignItems = 'center';
-            toolbar.style.gap = '6px';
-            toolbar.style.backgroundColor = 'white';
-            toolbar.style.borderRadius = '4px';
-            toolbar.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
-            toolbar.style.padding = '4px 6px';
-            toolbar.style.opacity = '0';
-            toolbar.style.transition = 'opacity 0.2s ease';
-            
-            // Add action buttons
-            // 1. Revert button
-            const revertBtn = document.createElement('button');
-            revertBtn.className = 'readease-toolbar-btn';
-            revertBtn.title = 'Revert to original text';
-            revertBtn.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                    <path d="M3 3v5h5"></path>
-                </svg>
-            `;
-            revertBtn.onclick = () => revertElement(originalElement);
-            toolbar.appendChild(revertBtn);
-            
-            // 2. Text-to-speech button
-            if (currentSettings.textToSpeechEnabled) {
-                const readBtn = document.createElement('button');
-                readBtn.className = 'readease-toolbar-btn';
-                readBtn.title = 'Read aloud';
-                readBtn.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                    </svg>
-                `;
-                readBtn.onclick = () => readTextAloud(response.simplifiedText);
-                toolbar.appendChild(readBtn);
-            }
-            
-            // Add toolbar to the document body
-            document.body.appendChild(toolbar);
-            
-            // Replace the loading text with simplified text, preserving all styling
-            processingContainer.textContent = response.simplifiedText;
-            
-            // Flag this as a processed element with data attribute
-            processingContainer.dataset.readease = 'processed';
-            processingContainer.dataset.toolbarId = toolbarId;
-            
-            // For accessibility and to indicate this is interactive
-            processingContainer.title = 'ReadEase processed text (hover for options)';
-            
-            // Store the original and simplified text for potential reversion
-            originalElement.simplifiedText = response.simplifiedText;
-            
-            // Show toolbar on hover
-            function positionToolbar() {
-                const rect = processingContainer.getBoundingClientRect();
-                toolbar.style.left = `${window.scrollX + rect.left}px`;
-                toolbar.style.top = `${window.scrollY + rect.top - toolbar.offsetHeight - 8}px`;
-            }
-            
-            processingContainer.addEventListener('mouseenter', () => {
-                positionToolbar();
-                toolbar.style.opacity = '1';
-            });
-            
-            processingContainer.addEventListener('mouseleave', () => {
-                toolbar.style.opacity = '0';
-            });
-            
-            // Update toolbar position on scroll/resize
-            window.addEventListener('scroll', positionToolbar, { passive: true });
-            window.addEventListener('resize', positionToolbar, { passive: true });
+            // Create new container with simplified text
+            createProcessedTextBox(text, response.simplifiedText, 'simplified');
         } else {
-            // Revert to original text if the API returned an error
-            revertElement(originalElement);
+            showToast('Could not simplify text. Please try again.');
         }
     });
 }
 
+// Process text for phonetic/syllable breakdown
+function handlePhoneticTranscription(text) {
+    if (!text || !currentSettings.phoneticsEnabled) return;
+    
+    // Create loading container
+    const loadingContainer = createProcessedTextBox(text, 'Analyzing syllables...', 'loading');
+    
+    chrome.runtime.sendMessage({
+        action: 'getPhoneticTranscription',
+        text: text
+    }, (response) => {
+        if (chrome.runtime.lastError) {
+            console.error('Error getting phonetic transcription:', chrome.runtime.lastError);
+            loadingContainer.remove();
+            showToast('Error analyzing syllables. Please try again.');
+            return;
+        }
+        
+        // Remove loading container
+        loadingContainer.remove();
+        
+        if (response && response.phoneticText) {
+            // Create new container with phonetic breakdown
+            createProcessedTextBox(text, response.phoneticText, 'phonetic');
+        } else {
+            showToast('Could not analyze syllables. Please try again.');
+        }
+    });
+}
+
+// Legacy function for backward compatibility
 function addPhoneticTranscription(element, text) {
     if (!text || !currentSettings.phoneticsEnabled) return;
     

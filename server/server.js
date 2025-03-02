@@ -18,13 +18,27 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/dyslexia-
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// Middleware
+// Middleware - Allow all extension origins
 app.use(cors({
-  origin: [process.env.CORS_ORIGIN, 'http://localhost:3000'],
-  credentials: true
+  origin: function(origin, callback) {
+    // Allow extensions and localhost
+    if (!origin || origin.startsWith('chrome-extension://') || origin === 'http://localhost:3000') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(bodyParser.json());
 app.use(cookieParser());
+
+// Add status endpoint
+app.get('/api/status', (req, res) => {
+  res.json({ status: 'online' });
+});
 
 // Routes
 app.use('/api/auth', authRoutes);

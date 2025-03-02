@@ -796,7 +796,36 @@ function saveApiKey() {
         openai: openaiKeyInput.value.trim()
     };
     
+    // Save to storage
     chrome.storage.sync.set({apiKeys: apiKeys});
+    
+    // Also update in the background script
+    chrome.runtime.sendMessage({
+        action: 'updateApiKeys',
+        apiKeys: apiKeys
+    });
+    
+    // Show confirmation
+    const apiTabPane = document.getElementById('api-tab');
+    if (apiTabPane) {
+        const messageEl = document.createElement('div');
+        messageEl.className = 'success-message';
+        messageEl.textContent = 'API key saved successfully!';
+        messageEl.style.marginTop = '10px';
+        
+        // Remove any existing messages
+        const existingMessage = apiTabPane.querySelector('.success-message');
+        if (existingMessage) {
+            existingMessage.remove();
+        }
+        
+        apiTabPane.appendChild(messageEl);
+        setTimeout(() => {
+            if (messageEl && messageEl.parentNode) {
+                messageEl.remove();
+            }
+        }, 3000);
+    }
 }
 
 async function checkLoginStatus() {
