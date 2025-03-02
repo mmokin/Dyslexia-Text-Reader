@@ -1,4 +1,4 @@
-# Dyslexia Text Reader
+# ReadEase - a Dyslexia Text Reader
 
 A Chrome extension to assist readers with dyslexia by providing various tools to improve readability and text comprehension.
 
