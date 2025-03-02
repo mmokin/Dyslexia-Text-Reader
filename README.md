@@ -30,7 +30,7 @@ cd server
 npm install
 ```
 
-3. Create a `.env` file in the server directory with the following:
+3. Create a `.env` file in the server directory with the following (OPTIONAL):
 ```
 PORT=3000
 MONGODB_URI=mongodb://localhost:27017/dyslexia-reader
